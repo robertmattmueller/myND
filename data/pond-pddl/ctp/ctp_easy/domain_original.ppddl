@@ -1,0 +1,56 @@
+(define (domain ctp)
+    (:requirements :adl :probabilistic-effects :action-costs)
+    (:types
+        location - object
+    )
+
+    (:predicates
+        (connected ?l1 - location ?l2 - location)
+        (road-passable ?l1 - location ?l2 - location)
+        (road-observed ?l1 - location ?l2 - location)
+        (current-loc ?l - location)
+    )
+
+    (:functions
+        ;;(current-loc) - location
+        (weight ?l1 - location ?l2 - location) - number
+        (passable-prob ?l1 - location ?l2 - location) - number
+    )
+
+    (:action move
+        :parameters (?from - location ?to - location)
+        :precondition 
+             (and
+                  ;(= (current-loc) ?from)
+                  (current-loc ?from)
+                  (connected ?from ?to)
+                  (road-passable ?from ?to)
+             )
+        :effect
+             (and
+                 (forall (?l - location)
+                         (when (and
+                                     (connected ?to ?l)
+                                     (not (road-observed ?to ?l))
+                               )
+                               (and
+                                     (probabilistic (passable-prob ?to ?l)
+                                                    (and 
+                                                         (road-passable ?to ?l)
+                                                         (road-passable ?l ?to)
+                                                    )
+                                     )
+                                     (road-observed ?to ?l)
+                                     (road-observed ?l ?to)
+                               )
+                         )
+                 )
+                 (not (current-loc ?from))
+                 (current-loc ?to)
+                 (increase (total-cost) (weight ?from ?to))
+             )
+    )
+)
+  
+
+                      

@@ -1,0 +1,8 @@
+(define (problem fault-o1-f1)
+ (:domain faults)
+ (:init
+	(not-completed o1)
+	(not-fault f1)
+ )
+ (:goal (made))
+)

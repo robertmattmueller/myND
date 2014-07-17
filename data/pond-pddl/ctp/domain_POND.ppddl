@@ -1,0 +1,96 @@
+(define (domain ctp)
+    (:types
+        location - object
+    )
+
+    (:predicates
+        (connected ?l1 - location ?l2 - location)
+        (road-passable ?l1 - location ?l2 - location)
+        (passable-from-agents-view ?l1 - location ?l2 - location)
+        (current-loc ?l - location)
+    )
+
+    (:action move-forward
+        :parameters (?from - location ?to - location)
+        :precondition 
+             (and
+                  (current-loc ?from)
+                  (connected ?from ?to)
+                  (road-passable ?from ?to)
+                  (passable-from-agents-view ?from ?to)
+             )
+        :effect
+             (and
+                 (not (current-loc ?from))
+                 (current-loc ?to)
+             )
+    )
+    
+    (:action move-backward
+        :parameters (?from - location ?to - location)
+        :precondition 
+             (and
+                  (current-loc ?from)
+                  (connected ?to ?from)
+                  (road-passable ?to ?from)
+                  (passable-from-agents-view ?to ?from)
+             )
+        :effect
+             (and
+                 (not (current-loc ?from))
+                 (current-loc ?to)
+             )
+    )
+    
+    (:action sense-forward_A
+      :parameters (?from - location ?to - location)
+      :precondition
+             (and
+                 (current-loc ?from)
+                 (connected ?from ?to)
+                 (road-passable ?from ?to) ;neu
+            )
+      ;:observe (passable-from-agents-view ?from ?to)
+      :effect (passable-from-agents-view ?from ?to) ;neu
+    )
+
+    (:action sense-forward_B
+      :parameters (?from - location ?to - location)
+      :precondition
+             (and
+                 (current-loc ?from)
+                 (connected ?from ?to)
+                 (not (road-passable ?from ?to)) ;neu
+            )
+      ;:observe (passable-from-agents-view ?from ?to)
+      :effect (not (passable-from-agents-view ?from ?to)) ;neu
+    )
+    
+    (:action sense-backward-A
+      :parameters (?from - location ?to - location)
+      :precondition
+             (and
+                 (current-loc ?from)
+                 (connected ?to ?from)
+                 (road-passable ?to ?from) ;neu
+            )
+      ;:observe (passable-from-agents-view ?to ?from)
+      :effect (passable-from-agents-view ?to ?from) ;neu
+    )
+
+    (:action sense-backward-B
+      :parameters (?from - location ?to - location)
+      :precondition
+             (and
+                 (current-loc ?from)
+                 (connected ?to ?from)
+                 (not (road-passable ?to ?from)) ;neu
+            )
+      ;:observe (passable-from-agents-view ?to ?from)
+      :effect (not (passable-from-agents-view ?to ?from)) ;neu
+    )
+
+)
+  
+
+                      

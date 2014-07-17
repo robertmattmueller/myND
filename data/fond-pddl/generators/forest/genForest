@@ -1,0 +1,122 @@
+#!/bin/bash
+
+genProblem(){
+echo "(define (problem p$1)"
+echo " (:domain forest)"
+echo " (:objects"
+for((i=1;i<=$1;i++)); do {
+ line="$line x$i y$i "
+}; done
+echo "          $line - location"
+line=""
+for((i=1;i<=$1;i++)); do {
+ line="$line sx$i sy$i "
+}; done
+echo "		$line - sub-location"
+echo " )"
+echo " (:init "
+echo "	;;;;;;;;top level grid;;;;;;;"
+echo "	(at-x x1) "
+echo "	(at-y y1)"
+	
+for((i=1;i<$1;i++)); do {
+SUCC=`expr $i + 1`
+echo "(succ-loc x$i x$SUCC)"
+echo "(succ-loc y$i y$SUCC)"
+}; done
+
+for((i=1;i<=$1;i++)); do {
+ for((j=1;j<=$1;j++)); do {
+echo "	(ninitialized x$i y$j)"
+ }; done
+}; done
+
+echo "	;;;;;;;;subproblems;;;;;;;;;;"
+for((i=1;i<=$1;i++)); do {
+ for((j=1;j<=$1;j++)); do {
+X=`expr $RANDOM % 3`
+PROBLEM=`expr 1 + $X`
+if [ $PROBLEM == 1 ] ; then
+ echo "  (problem-at x$i y$j grid)"
+elif [ $PROBLEM == 2 ]; then
+ echo "  (problem-at x$i y$j logistics)"
+else
+ echo "  (problem-at x$i y$j blocksworld)"
+fi
+ }; done
+}; done
+
+echo "        ;;;;;;;;enabling constraints;;"
+echo "	(enabled x1 y1)"
+
+for((i=1;i<=$1;i++)); do {
+ for((j=1;j<=$1;j++)); do {
+#XR=`expr $RANDOM % 2`
+#YR=`expr $RANDOM % 2`
+#XP=`expr 1 + $i`
+#YP=`expr 1 + $j`
+#XM=`expr $i - 1`
+#YM=`expr $j - 1`
+
+#if [ $XR == 0 -a $XM -gt 0 ]; then
+# X=$XM
+#elif [ $XP -gt $1 ] ; then
+# X=$XM
+#else
+# X=$XP
+#fi
+
+#if [ $YR == 0 -a $YM -gt 0 ]; then
+# Y=$YM
+#elif [ $YP -gt $1 ] ; then
+# Y=$YM
+#else
+# Y=$YP
+#fi
+
+E=`expr $RANDOM % 2`
+if [ $E == 0 -a $i -gt 1 ] ; then
+ X=`expr $i - 1`
+ echo "  (enables x$X y$j x$i y$j)"
+elif [ $j -gt 1 ] ; then
+  Y=`expr $j - 1`
+ echo "  (enables x$i y$Y x$i y$j)"
+fi
+
+echo "	(solved x$i y$i)"
+
+ }; done
+}; done
+
+
+echo "	;;;;;;;;grid sub-problem;;;;;;"
+echo "	(s-init-x sx$1)" 
+echo "	(s-init-y sy$1)"
+echo "	(s-goal-x sx1)" 
+echo "	(s-goal-y sy1)"
+	
+for((i=1;i<$1;i++)); do {
+SUCC=`expr $i + 1`
+echo "(succ-loc sx$i sx$SUCC)"
+echo "(succ-loc sy$i sy$SUCC)"
+}; done
+
+
+echo "	;;;;;;logistics sub-problem;;"
+echo "                (s-city-loc l11 c1) (s-city-loc l12 c1)"
+echo "                (s-city-loc l21 c2) (s-city-loc l22 c2)"
+echo "		(s-airport-loc l11) (s-airport-loc l21)"
+	
+
+echo " )"
+echo " (:goal "
+echo "	(and (at-x x$1) (at-y y$1))"
+echo " )"
+echo ")"
+ 
+}
+
+
+
+genProblem $1 > p_$1_$2.pddl 
+#genDomain $1 > d$1.pddl 

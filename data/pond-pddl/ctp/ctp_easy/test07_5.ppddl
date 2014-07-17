@@ -1,0 +1,33 @@
+(define (problem test07_5)
+	(:domain ctp)
+	(:objects
+		loc1 - location
+		loc2 - location
+		loc3 - location
+		loc4 - location
+		loc5 - location
+	)
+	(:init
+		(current-loc loc1)
+		(connected loc1 loc2)
+		(road-passable loc1 loc2)
+		(passable-from-agents-view loc1 loc2)
+		(connected loc1 loc4)
+		(road-passable loc1 loc4)
+		(passable-from-agents-view loc1 loc4)
+		(connected loc1 loc5)
+		(road-passable loc1 loc5)
+		(passable-from-agents-view loc1 loc5)
+		(connected loc2 loc3)
+		(unknown (passable-from-agents-view loc2 loc3))
+		(connected loc2 loc4)
+		(unknown (passable-from-agents-view loc2 loc4))
+		(connected loc3 loc4)
+		(road-passable loc3 loc4)
+		(unknown (passable-from-agents-view loc3 loc4))
+		(connected loc4 loc5)
+		(road-passable loc4 loc5)
+		(unknown (passable-from-agents-view loc4 loc5))
+	)
+	(:goal (current-loc loc5))
+)

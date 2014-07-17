@@ -1,0 +1,93 @@
+Parsing... [0.000s CPU, 0.014s wall-clock]
+Instantiating...
+Normalizing task... [0.000s CPU, 0.000s wall-clock]
+Generating Datalog program... [0.000s CPU, 0.001s wall-clock]
+Normalizing Datalog program...
+Normalizing Datalog program: [0.000s CPU, 0.003s wall-clock]
+Preparing model... [0.010s CPU, 0.002s wall-clock]
+Generated 52 rules.
+Computing model... [0.020s CPU, 0.019s wall-clock]
+635 relevant atoms
+542 auxiliary atoms
+1177 final queue length
+1546 total queue pushes
+Completing instantiation... [0.020s CPU, 0.022s wall-clock]
+Instantiating: [0.050s CPU, 0.048s wall-clock]
+Computing fact groups...
+Finding invariants...
+21 initial candidates
+Finding invariants: [0.010s CPU, 0.005s wall-clock]
+Checking invariant weight... [0.000s CPU, 0.000s wall-clock]
+Instantiating groups... [0.000s CPU, 0.001s wall-clock]
+Collecting mutex groups... [0.000s CPU, 0.000s wall-clock]
+Choosing groups...
+8 uncovered facts
+Choosing groups: [0.000s CPU, 0.000s wall-clock]
+Building translation key... [0.000s CPU, 0.000s wall-clock]
+Computing fact groups: [0.010s CPU, 0.006s wall-clock]
+Building STRIPS to SAS dictionary... [0.000s CPU, 0.000s wall-clock]
+Building dictionary for full mutex groups... [0.000s CPU, 0.000s wall-clock]
+Building mutex information...
+Building mutex information: [0.000s CPU, 0.000s wall-clock]
+Translating task...
+Processing axioms...
+Simplifying axioms... [0.000s CPU, 0.000s wall-clock]
+Processing axioms: [0.000s CPU, 0.001s wall-clock]
+Static fact: Atom adjacent(l1, l1)
+Static fact: Atom adjacent(l1, l2)
+Static fact: Atom adjacent(l1, l3)
+Static fact: Atom adjacent(l1, l4)
+Static fact: Atom adjacent(l1, l5)
+Static fact: Atom adjacent(l1, l6)
+Static fact: Atom adjacent(l1, l7)
+Static fact: Atom adjacent(l2, l1)
+Static fact: Atom adjacent(l2, l2)
+Static fact: Atom adjacent(l2, l3)
+Static fact: Atom adjacent(l2, l4)
+Static fact: Atom adjacent(l2, l5)
+Static fact: Atom adjacent(l2, l7)
+Static fact: Atom adjacent(l3, l1)
+Static fact: Atom adjacent(l3, l2)
+Static fact: Atom adjacent(l3, l3)
+Static fact: Atom adjacent(l3, l4)
+Static fact: Atom adjacent(l3, l5)
+Static fact: Atom adjacent(l3, l6)
+Static fact: Atom adjacent(l3, l7)
+Static fact: Atom adjacent(l4, l1)
+Static fact: Atom adjacent(l4, l2)
+Static fact: Atom adjacent(l4, l3)
+Static fact: Atom adjacent(l4, l4)
+Static fact: Atom adjacent(l4, l5)
+Static fact: Atom adjacent(l4, l7)
+Static fact: Atom adjacent(l5, l1)
+Static fact: Atom adjacent(l5, l2)
+Static fact: Atom adjacent(l5, l3)
+Static fact: Atom adjacent(l5, l4)
+Static fact: Atom adjacent(l5, l5)
+Static fact: Atom adjacent(l6, l1)
+Static fact: Atom adjacent(l6, l3)
+Static fact: Atom adjacent(l6, l6)
+Static fact: Atom adjacent(l7, l1)
+Static fact: Atom adjacent(l7, l2)
+Static fact: Atom adjacent(l7, l3)
+Static fact: Atom adjacent(l7, l4)
+Static fact: Atom adjacent(l7, l7)
+Static fact: Atom hospital(l1)
+Static fact: Atom hospital(l3)
+Static fact: Atom hospital(l4)
+Static fact: Atom hospital(l6)
+Static fact: Atom hospital(l7)
+Static fact: Atom water-at(l4)
+Translating task: [0.020s CPU, 0.021s wall-clock]
+63 implied effects removed
+5 effect conditions simplified
+0 implied preconditions added
+Translator variables: 25
+Translator derived variables: 0
+Translator facts: 120
+Translator mutex groups: 27
+Translator total mutex groups size: 97
+Translator operators: 440
+Translator task size: 2115
+Writing output... [0.000s CPU, 0.003s wall-clock]
+Done! [0.080s CPU, 0.095s wall-clock]

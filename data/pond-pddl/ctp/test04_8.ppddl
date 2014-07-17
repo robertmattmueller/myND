@@ -1,0 +1,57 @@
+(define (problem test04_8)
+	(:domain ctp)
+	(:objects
+		loc1 - location
+		loc2 - location
+		loc3 - location
+		loc4 - location
+		loc5 - location
+		loc6 - location
+		loc7 - location
+		loc8 - location
+	)
+	(:init
+		(current-loc loc1)
+		(connected loc1 loc2)
+		(road-passable loc1 loc2)
+		(passable-from-agents-view loc1 loc2)
+		(connected loc1 loc3)
+		(road-passable loc1 loc3)
+		(passable-from-agents-view loc1 loc3)
+		(connected loc2 loc3)
+		(unknown (passable-from-agents-view loc2 loc3))
+		(connected loc2 loc4)
+		(road-passable loc2 loc4)
+		(unknown (passable-from-agents-view loc2 loc4))
+		(connected loc2 loc6)
+		(road-passable loc2 loc6)
+		(passable-from-agents-view loc2 loc6)
+		(connected loc3 loc4)
+		(road-passable loc3 loc4)
+		(unknown (passable-from-agents-view loc3 loc4))
+		(connected loc3 loc5)
+		(unknown (passable-from-agents-view loc3 loc5))
+		(connected loc3 loc7)
+		(unknown (passable-from-agents-view loc3 loc7))
+		(connected loc4 loc5)
+		(road-passable loc4 loc5)
+		(passable-from-agents-view loc4 loc5)
+		(connected loc4 loc6)
+		(road-passable loc4 loc6)
+		(unknown (passable-from-agents-view loc4 loc6))
+		(connected loc5 loc6)
+		(road-passable loc5 loc6)
+		(passable-from-agents-view loc5 loc6)
+		(connected loc5 loc7)
+		(unknown (passable-from-agents-view loc5 loc7))
+		(connected loc5 loc8)
+		(road-passable loc5 loc8)
+		(unknown (passable-from-agents-view loc5 loc8))
+		(connected loc6 loc8)
+		(road-passable loc6 loc8)
+		(unknown (passable-from-agents-view loc6 loc8))
+		(connected loc7 loc8)
+		(unknown (passable-from-agents-view loc7 loc8))
+	)
+	(:goal (current-loc loc8))
+)

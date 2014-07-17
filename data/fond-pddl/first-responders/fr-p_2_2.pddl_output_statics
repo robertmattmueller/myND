@@ -1,0 +1,5 @@
+(adjacent l1 l1)
+(adjacent l2 l2)
+(hospital l1)
+(water-at l1)
+(water-at l2)

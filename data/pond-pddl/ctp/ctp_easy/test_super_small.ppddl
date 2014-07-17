@@ -1,0 +1,18 @@
+(define (problem super-small)
+	(:domain ctp)
+	(:objects
+		loc1 - location
+		loc2 - location
+		loc3 - location
+	)
+	(:init
+		(current-loc loc1)
+		(connected loc1 loc2)
+		(road-passable loc1 loc2)
+        (passable-from-agents-view loc1 loc2)
+        (connected loc2 loc3)
+        (road-passable loc2 loc3)
+        (unknown (passable-from-agents-view loc2 loc3))
+	)
+	(:goal (current-loc loc3))
+)
