@@ -1,6 +1,8 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 
+__author__ = "Robert Mattmueller"
+
 from sys import argv
 
 def location(x,y):

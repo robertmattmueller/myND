@@ -17,7 +17,7 @@ Usage
 To compile myND, change to the source folder (src) and use the 
 following command.
 
-$ javac \`find -name '*.java'\`
+$ ./build
 
 
 To run myND, change to the source folder (src) and use the 
