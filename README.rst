@@ -32,7 +32,7 @@ Useful Java Options are
 
 Check out available planner options from our Wiki page
 
-    https://bitbucket.org/robertmattmueller/mynd/wiki/Planner%20Options
+    https://bitbucket.org/robertmattmueller/mynd/src/default/wiki/Planner_Options.md
 
 You can find some planning tasks in SAS+ format in the folders data/benchmarks-fond
 and data/benchmarks-pond.
@@ -47,7 +47,7 @@ $ java -ea -Xmx4g mynd.MyNDPlanner -laostar -ff ../data/benchmarks-fond/blockswo
 
 For more information on the planner, check out our Wiki
 
-	https://bitbucket.org/robertmattmueller/mynd/wiki/
+	https://bitbucket.org/robertmattmueller/mynd/src/default/wiki/Home.md
 
 
 Contact
