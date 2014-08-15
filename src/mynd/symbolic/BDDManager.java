@@ -186,8 +186,9 @@ public class BDDManager {
 				assert operatorMapping.get(result).equals(explicitOp);
 				// TODO somehow unnecessary to build this symbolic operator a second time... use another map? 
 			}
-			else
+			else {
 				operatorMapping.put(result, explicitOp);
+			}
 		}
 		return result;
 	}
@@ -197,11 +198,10 @@ public class BDDManager {
 	 * 
 	 * @return set of symbolic operators.
 	 */
-	public Set<Operator> initializeOperators() {
-		assert(Global.problem != null);
-		Set<Operator> symbolicOps = new LinkedHashSet<Operator>((int) (Global.problem.getOperators().size() * 0.75) + 1);
-		for (Operator op : Global.problem.getOperators()) {
-			symbolicOps.add(createSymbolicOperator(op.getName(), (ExplicitOperator) op));
+	public Set<Operator> initializeOperators(Set<ExplicitOperator> operators) {
+		Set<Operator> symbolicOps = new LinkedHashSet<Operator>((int) (operators.size() * 0.75) + 1);
+		for (ExplicitOperator op : operators) {
+			symbolicOps.add(createSymbolicOperator(op.getName(), op));
 		}
 		return symbolicOps;
 	}

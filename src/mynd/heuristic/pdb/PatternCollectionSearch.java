@@ -17,6 +17,7 @@ import mynd.explicit.ExplicitOperator;
 import mynd.explicit.ExplicitOperator.OperatorRule;
 import mynd.state.Operator;
 import mynd.state.State;
+import mynd.symbolic.PartiallyObservableProblem;
 import mynd.util.Pair;
 
 
@@ -80,18 +81,18 @@ public class PatternCollectionSearch {
 	 * When pattern search is done under the assumption of full observability, 
 	 * belief states are only used during problem solving (search).
 	 */
-	public static boolean fullObservablePatternSearch = false;
+	public static boolean fullObservablePatternSearch = true;
 	
 	/**
 	 * Under partial observability not every variable is allowed for a pattern.
 	 * 1. variable is "good" if it is observable.
 	 * 2. variable is "good" if it does not occur in a condition.
-	 * 3. variable is "good" if it is does not become uncertain.
+	 * 3. variable is "good" if it is does not become uncertain and its value is initially known.
 	 * Variables which are not "good" are not allowed, because they can make
 	 * the abstracted problem unsolvable, although the planning task is 
 	 * solvable.
 	 */
-	private HashSet<Integer> allowedVarsForPatterns = new HashSet<Integer>((int) (Global.problem.numStateVars * 0.75) + 1);
+	private Set<Integer> allowedVarsForPatterns;
 	
 	
 	public final Map<Integer, Set<Integer>> derivedVarsDependencies;
@@ -102,24 +103,31 @@ public class PatternCollectionSearch {
 	public static boolean DEBUG = false;
 
 	/**
-	 * Initialize hillclimbing search
+	 * Initialize hill climbing search
 	 * 
 	 * @param problem
 	 *            The underlying planning problem.
 	 */
 	public PatternCollectionSearch() {
+		starttime = System.currentTimeMillis();
+		// Check options.
 		if (PDB.pdbMaxSize == -1) {
 			// PDB max size not set.
-			if (Global.problem.isFullObservable || MyNDPlanner.assumeFullObservability)
+			if (Global.problem.isFullObservable || MyNDPlanner.assumeFullObservability) {
 				PDB.pdbMaxSize = 50000;
-			else
+			}
+			else {
 				PDB.pdbMaxSize = 10000;
+			}
 		}
-		if (pdbsOverallMaxSize == -1)
+		if (pdbsOverallMaxSize == -1) {
+			// PDBs overall size not set.
 			pdbsOverallMaxSize = 10 * PDB.pdbMaxSize;
-		if (steps == 0)
+		}
+		if (steps == 0) {
+			// No pattern search at all.
 			fullObservablePatternSearch = false;
-		starttime = System.currentTimeMillis();
+		}
 		if (DEBUG) {
 			System.out.println("pdbMaxSize = " + PDB.pdbMaxSize);
 			System.out.println("pdbsOverallMaxSize = " + pdbsOverallMaxSize);
@@ -373,80 +381,120 @@ public class PatternCollectionSearch {
 
 		return true;
 	}
+	
+	public static Set<Integer> computeAllowedPatternVariablesForPOND() {
+		Set<Integer> result = new HashSet<Integer>();
+		assert !Global.problem.isFullObservable;
+		int capacity = (int) (Global.problem.numStateVars / 0.75) + 1;
+		//HashSet<Integer> observableVars = new HashSet<Integer>(capacity);
+		HashMap<Integer, HashSet<Integer>> observableValues = new HashMap<Integer, HashSet<Integer>>(capacity);
+		HashSet<Integer> conditionalVars = new HashSet<Integer>(capacity);
+		HashSet<Integer> varsWhichCouldBecomeUncertain = new HashSet<Integer>(capacity);
+		
+		for (Operator op : Global.problem.getOperators()) {
+			// 1. variable is "good" if it is observable.
+			// That means that at least k-1 values has to be observable, if domain size is k.
+			for (Pair<Integer, Integer> varVal : op.observation) {
+				if (observableValues.containsKey(varVal.first)) {
+					observableValues.get(varVal.first).add(varVal.second);
+				}
+				else {
+					HashSet<Integer> values = new HashSet<Integer>((int) (Global.problem.domainSizes.get(varVal.first) / 0.75) + 1);
+					values.add(varVal.second);
+					observableValues.put(varVal.first, values);
+				}
+			}
+			ExplicitOperator explicitOp = op.getExplicitOperator();
+			// 3. variable is "good" if it is does not become uncertain and its value is initially known.
+			// Check all nondeterministic effects.
+			if (explicitOp.isCausative && explicitOp.getNondeterministicEffect().size() > 1) {
+				// Start by creating a map from every affected var to its precondition value or -1 if
+				// it is not part of the precondition.
+				HashMap<Integer, Integer> affectedVarsToPreconditionValue = new HashMap<Integer, Integer>();
+				for (int var : explicitOp.getAffectedVariables()) {
+					if (explicitOp.precondition.variableValueMap.containsKey(var)) {
+						affectedVarsToPreconditionValue.put(var, explicitOp.precondition.variableValueMap.get(var));
+					}
+					else {
+						affectedVarsToPreconditionValue.put(var, -1);
+					}
+				}
+				
+				HashMap<Integer, Integer> variableValuePairsOfAllChoices = new HashMap<Integer, Integer>();
+				for (Set<ExplicitEffect> choice : explicitOp.getNondeterministicEffect()) {
+					HashMap<Integer, Integer> choiceVarVals = new HashMap<Integer, Integer>();
+					for (ExplicitEffect eff : choice) {
+						choiceVarVals.put(eff.variable, eff.value); // collect all variables and values of this choice.
+					}
+					
+					// For each var (which is not yet in varsWhichCouldBecomeUncertain), test if 
+					// value is the same as in other choices (of earlier iterations).
+					for (int var : affectedVarsToPreconditionValue.keySet())
+						if (!varsWhichCouldBecomeUncertain.contains(var)) {
+							if (!variableValuePairsOfAllChoices.containsKey(var)) { // initialization
+								if (choiceVarVals.containsKey(var)) {
+									variableValuePairsOfAllChoices.put(var, choiceVarVals.get(var));
+								}
+								else {
+									variableValuePairsOfAllChoices.put(var, affectedVarsToPreconditionValue.get(var));
+								}
+							}
+							else { // Test for equality.
+								if (choiceVarVals.containsKey(var)) {
+									if (!variableValuePairsOfAllChoices.get(var).equals(choiceVarVals.get(var))) {
+										varsWhichCouldBecomeUncertain.add(var);
+									}
+								}
+								else {
+									if (!variableValuePairsOfAllChoices.get(var).equals(affectedVarsToPreconditionValue.get(var))) {
+										varsWhichCouldBecomeUncertain.add(var);
+									}
+								}
+							}
+						}
+				}
+			}
+			// 2. variable is "good" if it does not occur in a condition or the goal.
+			conditionalVars.addAll(explicitOp.precondition.variableValueMap.keySet());
+		}
+		for (int var = 0; var < Global.problem.numStateVars; ++var) {
+			// 1. variable is "good" if it is observable.
+			if (observableValues.containsKey(var) && observableValues.get(var).size() >= Global.problem.domainSizes.get(var) - 1) {
+				result.add(var);
+			}
+			// 2. variable is "good" if it is does not become uncertain and is initially known.
+			else if (!varsWhichCouldBecomeUncertain.contains(var) && ((PartiallyObservableProblem) Global.problem).variablesWhichAreInitiallyKnown.contains(var)) {
+				result.add(var);
+			}
+			// 3. variable is "good" if it does not occur in a condition or the goal.
+			else if (!conditionalVars.contains(var)) {
+				result.add(var);
+			}
+		}
+		return result;
+	}
 
 	/**
-	 * Perform hillclimbing search until there is no more improvement or the
+	 * Perform hill climbing search until there is no more improvement or the
 	 * possible improvers are pruned away because of memory constraints.
 	 * 
 	 * @return The canonical PDB heuristic corresponding to the pattern
 	 *         collection found by this search
 	 */
 	public CanonicalPDBHeuristic search() {
-		// Check every variable if it is suitable for patterns.
 		if (!Global.problem.isFullObservable) {
-			int capacity = (int) (Global.problem.numStateVars * 0.75) + 1;
-			HashSet<Integer> observableVars = new HashSet<Integer>(capacity);
-			HashSet<Integer> conditionalVars = new HashSet<Integer>(capacity);
-			HashSet<Integer> varsWhichCouldBecomeUncertain = new HashSet<Integer>(capacity);
-			for (Operator op : Global.problem.getOperators()) {
-				for (Pair<Integer, Integer> varVal : op.observation) {
-					observableVars.add(varVal.first);
-				}
-				ExplicitOperator explicitOp = op.getExplicitOperator();
-				if (explicitOp.isCausative && explicitOp.getNondeterministicEffect().size() > 1) {
-					HashSet<Integer> affectedVars = new HashSet<Integer>();
-					affectedVars.addAll(explicitOp.getAffectedVariables());
-					HashMap<Integer, Integer> variableValuePairsOfAllChoices = new HashMap<Integer, Integer>();
-					for (Set<ExplicitEffect> choice : explicitOp.getNondeterministicEffect()) {
-						HashMap<Integer, Integer> choiceVariables = new HashMap<Integer, Integer>();
-						for (ExplicitEffect eff : choice) {
-							affectedVars.remove(eff.variable);
-							choiceVariables.put(eff.variable, eff.value); // collect all variables of this choice
-						}
-						// remaining variables are not part of *this* choice, but part of another choice
-						varsWhichCouldBecomeUncertain.addAll(affectedVars);
-						// restore affected vars (for next iteration)
-						affectedVars.addAll(explicitOp.getAffectedVariables());
-						/* for each var \in (choiceVars \ varsWhichCouldBecomeUncertain) test if 
-						   value is the same as in other choices */
-						for (int var : choiceVariables.keySet()) {
-							if (!varsWhichCouldBecomeUncertain.contains(var)) {
-								if (!variableValuePairsOfAllChoices.containsKey(var)) // initialization
-									variableValuePairsOfAllChoices.put(var, choiceVariables.get(var));
-								else { // test equality
-									if (variableValuePairsOfAllChoices.get(var) != choiceVariables.get(var)) 
-										varsWhichCouldBecomeUncertain.add(var);
-										// var has not be deleted because there is no equality test for *this* var anymore
-								}
-							}
-						}
-					}
-				}
-				conditionalVars.addAll(explicitOp.precondition.variableValueMap.keySet());
-			}
-			for (int var = 0; var < Global.problem.numStateVars; var++) {
-				// 1. variable is "good" if it is observable
-				if (observableVars.contains(var)) {
-					allowedVarsForPatterns.add(var);
-				}
-				// 2. variable is "good" if it does not occur in a condition
-				else if (!conditionalVars.contains(var)) {
-					allowedVarsForPatterns.add(var);
-				}
-				else {
-					// 3. variable is "good" if it is does not become uncertain.
-					if (!varsWhichCouldBecomeUncertain.contains(var)) {
-						allowedVarsForPatterns.add(var);
-					}
-				}
-			}
+			allowedVarsForPatterns = computeAllowedPatternVariablesForPOND();
+			System.err.println();
+			System.err.println("These variables are allowed as pattern variables.");
+			System.err.println(allowedVarsForPatterns);
+			System.err.println();
 		}
-		else { // full observable problem
+		else {
+			allowedVarsForPatterns = new HashSet<Integer>((int) (Global.problem.numStateVars * 0.75) + 1);
 			for (int var = 0; var < Global.problem.numStateVars; var++) {
 				allowedVarsForPatterns.add(var);
 			}
 		}
-		
 		System.err.println("Starting search for pattern collection.");
 		
 		// Initialize pattern collection (all singleton patterns for goal

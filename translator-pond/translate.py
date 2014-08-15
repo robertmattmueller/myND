@@ -385,28 +385,29 @@ def translate_strips_operators(actions, strips_to_sas, ranges, mutex_dict,
     #         same action with equal parameters and conditions.
     actions_by_name = partition(actions, (lambda a: a.name))
     result = []
-    for action_list in actions_by_name: 
+    for action_list in actions_by_name:
         sas_ops = translate_strips_operator(action_list, strips_to_sas, ranges,
                                             mutex_dict, mutex_ranges,
                                             implied_facts)
-        # FOND Step 2: Translate groups of actions with the same name 
-        # and precondition together.
-        operatorname = sas_ops[0].name
-        assert all(op.name == operatorname for op in sas_ops)
-        operatorcost = sas_ops[0].cost
-        assert all(op.cost == operatorcost for op in sas_ops)
-        observation = sas_ops[0].observation
-        assert all(op.observation == observation for op in sas_ops)
-        #preconditions = sas_ops[0].get_preconditions()
-        ops_by_name = partition(sas_ops, (lambda a: repr(a.get_preconditions())))
-        for op_list in ops_by_name:
-            prevail = set()
-            pre_post = []
-            for op in op_list:
-                prevail |= set(op.prevail)
-                pre_post.append(sorted(op.pre_post))
-            result.append(sas_tasks.SASOperator(operatorname, prevail, pre_post, operatorcost, observation))
-    
+        if len(sas_ops) > 0:
+            # FOND Step 2: Translate groups of actions with the same name 
+            # and precondition together.
+            operatorname = sas_ops[0].name
+            assert all(op.name == operatorname for op in sas_ops)
+            operatorcost = sas_ops[0].cost
+            assert all(op.cost == operatorcost for op in sas_ops)
+            observation = sas_ops[0].observation
+            assert all(op.observation == observation for op in sas_ops)
+            #preconditions = sas_ops[0].get_preconditions()
+            ops_by_name = partition(sas_ops, (lambda a: repr(a.get_preconditions())))
+            for op_list in ops_by_name:
+                prevail = set()
+                pre_post = []
+                for op in op_list:
+                    prevail |= set(op.prevail)
+                    pre_post.append(sorted(op.pre_post))
+                result.append(sas_tasks.SASOperator(operatorname, prevail, pre_post, operatorcost, observation))
+        
     return result
 
 
@@ -470,19 +471,23 @@ def translate_task(strips_to_sas, ranges, translation_key,
         pairs = strips_to_sas.get(fact, [])
         for pair in pairs:
             false_facts.remove(pair[0])
-    # TODO assert that every oneof/or-fact is "unknown"
+
     facts = []
     for fact in init:
+        assert fact not in init_unknown
         pairs = strips_to_sas.get(fact, [])
         for pair in pairs:
             false_facts.remove(pair[0])
         if pairs:
             facts = facts + pairs
     for var in false_facts:
+        assert fact not in init_unknown
         facts.append((var, ranges[var] - 1))
     facts_oneof = []   
     for oneof in init_oneof:
         assert len(oneof) >= 2
+        for fact in oneof:
+            assert fact in init_unknown
         l = []
         for one in oneof:
             l = l + strips_to_sas.get(one, [])
@@ -491,6 +496,7 @@ def translate_task(strips_to_sas, ranges, translation_key,
     # move to conditions.py?
     def translate_formula(formula, result, strips_to_sas, ranges, mutex_dict, mutex_ranges):
         if isinstance(formula, pddl.conditions.Atom):
+            assert formula in init_unknown
             result.append(strips_to_sas.get(formula, []))
         elif isinstance(formula, pddl.conditions.NegatedAtom):
             dict_list = translate_strips_conditions([formula], strips_to_sas, ranges, mutex_dict, mutex_ranges)
@@ -576,16 +582,6 @@ def pddl_to_sas(task):
     # are true initially (to use it in the reachability analysis)
     mod_task = deepcopy(task)
     mod_task.init = mod_task.init + mod_task.init_unknown
-    # TODO remove following as soon as assertion for unknown is done
-    for list in mod_task.init_oneof:
-        for element in list:
-            mod_task.init.append(element)
-    for pair in mod_task.init_formula: 
-        # remove negated atoms
-        if isinstance(pair[0], pddl.Atom):
-            mod_task.init.append(pair[0])
-        if isinstance(pair[1], pddl.Atom):
-            mod_task.init.append(pair[1])
     
     with timers.timing("Instantiating", block=True):
         (relaxed_reachable, atoms, actions, observation_actions, axioms,

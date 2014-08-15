@@ -95,17 +95,13 @@ class SASInit:
         self.facts_oneof = facts_oneof
         self.formulae = formulae
     def dump(self):
-        print(len(self.facts))
-        for var, val in self.facts:
-            if val != -1:
-                print("v%d: %d" % (var, val))
+        print("true facts")
+        print(self.facts)
+        print("oneofs")
         # TODO POND
- #       print len(self.facts_oneof)
- #       for var, val, var2, val2 in self.facts_oneof:
- #           print "v%d: %d | v%d: %d" % (var, val, var2, val2)
- #       print len(self.facts_or)
- #       for var, val, var2, val2 in self.facts_or:
- #           print "v%d: %d | v%d: %d" % (var, val, var2, val2)
+        print(self.facts_oneof)
+        print("formulae")
+        print(self.formulae)
     def output(self, stream):
         print("begin_state", file=stream)
         print(len(self.facts), file=stream)

@@ -31,7 +31,6 @@ import mynd.util.Pair;
 import net.sf.javabdd.BDD;
 
 
-
 /**
  * A partially observable planning problem is a planning task where parts of the planning task
  * could not be observed or are uncertain. There exists sensing actions, which are used to observe parts of
@@ -60,12 +59,8 @@ public class PartiallyObservableProblem extends Problem {
     public final ExplicitAxiomEvaluator explicitAxiomEvaluator;
     
     /**
-     * Variables which are uncertain in the initial state or become
-     * uncertain because of a nondeterministic action AND
-     * which are part of the goal or a precondition.
+     * Variables that values are not unknown in the initial state.
      */
-    private Set<Integer> uncertainVariables;
-    
     public final Set<Integer> variablesWhichAreInitiallyKnown;
     
     /**
@@ -84,7 +79,6 @@ public class PartiallyObservableProblem extends Problem {
 		initialState = new BeliefState(initialBDD, axiomEvaluator);
 		explicitAxiomEvaluator = new ExplicitAxiomEvaluator();
 		this.variablesWhichAreInitiallyKnown = Collections.unmodifiableSet(variablesWhichAreInitiallyKnown);
-		computeVariablesWhichCouldBecomeUncertain();
     }
     
     /**
@@ -232,7 +226,13 @@ public class PartiallyObservableProblem extends Problem {
 	 */
 	@Override
     public void finishInitializationAndPreprocessing() {
-    	operators = Collections.unmodifiableSet(Global.BDDManager.initializeOperators());
+		// TODO not very reasonable to use operators in this way (first containing explicit ops
+		// and after initialization containing symbolic ops).
+		Set<ExplicitOperator> explicitOps = new HashSet<ExplicitOperator>((int) (operators.size() / 0.75) + 1);
+		for (Operator op : operators) {
+			explicitOps.add((ExplicitOperator) op);
+		}
+    	operators = Collections.unmodifiableSet(Global.BDDManager.initializeOperators(explicitOps));
     	setOriginalOperators(operators);
     	assert Operator.assertNoDuplicateInNames(getOperators());
         goal = Global.BDDManager.initializeGoal();
@@ -386,84 +386,5 @@ public class PartiallyObservableProblem extends Problem {
 	@Override
 	public void setInitialState(State initState) {
 		initialState = (BeliefState) initState;
-	}
-	
-	// FIXME: Implement this more efficient.
-	/**
-	 * Computes variables which could become uncertain by applying nondeterministic effects.
-	 * 
-	 * @param variablesWhichAreInitiallyKnown
-	 */
-	public void computeVariablesWhichCouldBecomeUncertain() {
-		// Variables which are part of the goal or a precondition.
-		Set<Integer> conditionalVariables = new HashSet<Integer>();
-		conditionalVariables.addAll(explicitGoal.variableValueMap.keySet());
-		for (Operator op : getOperators()) {
-			conditionalVariables.addAll(op.getExplicitOperator().precondition.variableValueMap.values());
-		}
-		
-		// Add variables which are not known initially
-		Set<Integer> uncertainVariables = new HashSet<Integer>(numStateVars);
-		for (int var : conditionalVariables) {
-			if (!variablesWhichAreInitiallyKnown.contains(var)) {
-				uncertainVariables.add(var);
-			}
-		}
-		
-		// Check each nondeterministic operator.
-		for (Operator op : operators) {
-			ExplicitOperator explicitOp = op.getExplicitOperator();
-			Set<Set<ExplicitEffect>> effects = explicitOp.getNondeterministicEffect();
-			if (explicitOp.isCausative && effects.size() > 1) {
-				for (int var : explicitOp.getAffectedVariables()) {
-					if (uncertainVariables.contains(var) || !conditionalVariables.contains(var)) {
-						continue;
-					}
-					// If this var gets different values in the effects, then it becomes uncertain.
-					int value = -1;
-					for (Set<ExplicitEffect> effect : effects) {
-						if (!effect.contains(var)) {
-							uncertainVariables.add(var);
-							break;
-						}
-						boolean breakLoop = false;
-						for (ExplicitEffect pair : effect) {
-							if (pair.variable == var) {
-								if (value == -1) {
-									value = pair.value;
-									break;
-								}
-								else {
-									if (value != pair.value) {
-										uncertainVariables.add(var);
-										breakLoop = true;
-										break;
-									}
-								}
-							}
-						}
-						if (breakLoop) {
-							break;
-						}
-					}
-				}
-			}
-		}
-		this.uncertainVariables = Collections.unmodifiableSet(uncertainVariables);
-		//if (DEBUG) {
-			//System.out.println("uncertain variables...");
-			//System.out.println(uncertainVariables);
-		//}
-	}
-	
-	/**
-	 * Get variables which are uncertain in the initial state or become
-     * uncertain because of a nondeterministic action AND
-     * which are part of the goal or a precondition.
-     *
-	 * @return uncertain variables
-	 */
-	public Set<Integer> getUncertainVariables() {
-		return uncertainVariables;
 	}
 }

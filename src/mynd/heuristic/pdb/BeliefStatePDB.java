@@ -46,12 +46,12 @@ public class BeliefStatePDB extends PDB {
         if (pdbMaxSize == -1) // max size is not set by an option
         	pdbMaxSize = 10000;
         abstraction = Global.problem.abstractToPattern(pattern);
-        if (DEBUG)
+        if (DEBUG) {
         	System.out.println("Computed abstraction for pattern " + pattern);
-        // TODO [issue #25] How to initialize HashMap?
+        }
         patternDatabase = new HashMap<Integer, Double>((int) Math.ceil(PDB.numAbstractStates(pattern) / 0.75));
         fillPDB();
-        System.err.print("Created new PDB for variables ");
+        System.err.print("Created new Belief State PDB for variables ");
         System.err.println(pattern);
         System.err.println("in " + (System.currentTimeMillis() - start)/1000 + "s");
         if (DEBUG) {

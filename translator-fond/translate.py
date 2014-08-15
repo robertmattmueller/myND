@@ -388,21 +388,22 @@ def translate_strips_operators(actions, strips_to_sas, ranges, mutex_dict,
         sas_ops = translate_strips_operator(action_list, strips_to_sas, ranges,
                                             mutex_dict, mutex_ranges,
                                             implied_facts)
-        # FOND Step 2: Translate groups of actions with the same name 
-        # and precondition together.
-        operatorname = sas_ops[0].name
-        assert all(op.name == operatorname for op in sas_ops)
-        operatorcost = sas_ops[0].cost
-        assert all(op.cost == operatorcost for op in sas_ops)
-        #preconditions = sas_ops[0].get_preconditions()
-        ops_by_name = partition(sas_ops, (lambda a: repr(a.get_preconditions())))
-        for op_list in ops_by_name:
-            prevail = set()
-            pre_post = []
-            for op in op_list:
-                prevail |= set(op.prevail)
-                pre_post.append(sorted(op.pre_post))
-            result.append(sas_tasks.SASOperator(operatorname, prevail, pre_post, operatorcost))
+        if len(sas_ops) > 0:
+            # FOND Step 2: Translate groups of actions with the same name 
+            # and precondition together.
+            operatorname = sas_ops[0].name
+            assert all(op.name == operatorname for op in sas_ops)
+            operatorcost = sas_ops[0].cost
+            assert all(op.cost == operatorcost for op in sas_ops)
+            #preconditions = sas_ops[0].get_preconditions()
+            ops_by_name = partition(sas_ops, (lambda a: repr(a.get_preconditions())))
+            for op_list in ops_by_name:
+                prevail = set()
+                pre_post = []
+                for op in op_list:
+                    prevail |= set(op.prevail)
+                    pre_post.append(sorted(op.pre_post))
+                result.append(sas_tasks.SASOperator(operatorname, prevail, pre_post, operatorcost))
     
     return result
 

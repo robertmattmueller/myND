@@ -216,7 +216,7 @@ public class MyNDPlanner {
             }
             else if (opt.equals("assumeFO")) {
             	MyNDPlanner.assumeFullObservability = true;
-            	assert PatternCollectionSearch.fullObservablePatternSearch == false;
+            	PatternCollectionSearch.fullObservablePatternSearch = false;
             }
             else if (opt.equals("FOPatternSearch")) {
             	PatternCollectionSearch.fullObservablePatternSearch = true;

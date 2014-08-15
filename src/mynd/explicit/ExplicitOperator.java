@@ -104,6 +104,10 @@ public class ExplicitOperator extends Operator {
      */
     public ExplicitOperator(String name, ExplicitCondition precondition, Set<Set<ExplicitEffect>> nondeterministicEffect, Set<Pair<Integer, Integer>> observation, boolean isAbstracted, int cost) {
     	super(name, observation, isAbstracted, nondeterministicEffect != null, cost);
+    	if (nondeterministicEffect != null) {
+    		assert !nondeterministicEffect.isEmpty() : "Operators with no effects are expected to be null.";
+        	assert !(nondeterministicEffect.size() == 1) || !nondeterministicEffect.iterator().next().isEmpty() : "Operators with only empty effects are expected to be null.";
+    	}
     	this.precondition = precondition;
     	if (nondeterministicEffect == null) {
     		this.nondeterministicEffect = null;
