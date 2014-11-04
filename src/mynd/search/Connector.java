@@ -37,7 +37,17 @@ public class Connector {
     /**
      * Base cost of this connector
      */
-    int baseCost;
+    double baseCost;
+    
+    /**
+     * True iff. all of its children are proven.
+     */
+    private boolean isProven = false;
+    
+    /**
+     * True iff. at least one of its children is disproven.
+     */
+    private boolean isDisproven = false;
 
     /**
      * Creates a new connector. Links parent and child nodes back to this
@@ -92,11 +102,11 @@ public class Connector {
         return buffer.toString();
     }
     
-    public void setBaseCost(int baseCost) {
+    public void setBaseCost(double baseCost) {
     	this.baseCost = baseCost;
     }
     
-    public int getBaseCost() {
+    public double getBaseCost() {
     	return this.baseCost;
     }
     
@@ -120,5 +130,56 @@ public class Connector {
      */
     public AOStarNode getParent() {
     	return parent;
+    }
+    
+    /**
+     * Get this connector's proven status.
+     * 
+     * @return true iff. all children are proven.
+     */
+    public boolean isProven() {
+        checkProvenAndDisprovenStatus();
+        return isProven;
+    }
+    
+    /**
+     * Get this connector's disproven status.
+     * 
+     * @return true iff. at least one child is disproven.
+     */
+    public boolean isDisproven() {
+        checkProvenAndDisprovenStatus();
+        return isDisproven;
+    }
+    
+    /**
+     * Check this connector's proven status.
+     */
+    private void checkProvenAndDisprovenStatus() {
+        if (isProven || isDisproven) {
+            return;
+        }
+        isProven = true;
+        isDisproven = false;
+        for (AOStarNode child : children) {
+            isProven &= child.isProven;
+            isDisproven |= child.isDisproven;
+        }
+    }
+    
+    /**
+     * Get the maximum cost estimate of this connector's children.
+     * 
+     * @return maximum child cost estimate
+     */
+    public double getMaxChildEstimate() {
+        double max = -1;
+        for (AOStarNode child : children) {
+            if (child.costEstimate > max) {
+                max = child.costEstimate;
+            }
+        }
+        assert max >= 0;
+        return max;
     }
 }

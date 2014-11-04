@@ -610,7 +610,7 @@ public class PatternCollectionSearch {
 //				}
 //			}
 			System.err.println("Number of temporary PDBs: " + canonical.temporaryPDBs.size());
-			System.err.println("Estimated memory usage for temporary PDBs: " + canonical.sizesOfTemporaryPDBs * 16/1000 + " KByte");
+			//System.err.println("Estimated memory usage for temporary PDBs: " + canonical.sizesOfTemporaryPDBs * 16/1000 + " KByte");
 		}
 		System.err.println("Finished search for pattern collection.");
 

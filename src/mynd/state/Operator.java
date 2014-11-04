@@ -13,83 +13,83 @@ import mynd.util.Pair;
  *
  */
 public abstract class Operator {
-	
+
     /**
      * Name of this operator.
      */
     protected String name;
-    
-	/**
+
+    /**
      * Observation which is a set of variable-value pairs.
      */
-	public final Set<Pair<Integer, Integer>> observation;
-	
+    public final Set<Pair<Integer, Integer>> observation;
+
     /**
      * Denotes if this operator is a determinized operator.
      */
     protected boolean isDeterminized = false;
-    
+
     /**
      * Denotes if this operator is abstracted.
      */
     public final boolean isAbstracted;
-    
+
     /**
      * Denotes if this operator senses variable-value pairs.
      */
     public final boolean isSensing;
-    
+
     /**
      * Denotes if this operator has a non-empty effect, such that it
      * changes the current state. 
      */
     public final boolean isCausative;
-    
+
     /**
      * Cost to apply this operator.
      */
-    protected int cost;
-    
+    protected double cost;
+
     /**
      * Variables which are affected (either as part of an effect or as part of an observation)
      * by this operator.
      */
     protected Set<Integer> affectedVariables = new HashSet<Integer>();
-	
-	/**
-	 * Operator.
-	 * 
-	 * @param name         name of the operator
-	 * @param precondition precondition of the operator
-	 * @param effect       effect of the operator
-	 * @param observations variable-value pairs which could be observed by the operator
-	 */
-	protected Operator(String name, Set<Pair<Integer, Integer>> observation, boolean isAbstracted, boolean isCausative, int cost) {
-		this.name = name;
-		// Note: If this operator has no observations, this map is empty.
-		this.observation = Collections.unmodifiableSet(observation);
-		this.isAbstracted = isAbstracted;
-		isSensing = !observation.isEmpty();
-		this.isCausative = isCausative;
-		this.cost = cost;
-	}
-	
-	/**
-	 * Get the precondition of this operator.
-	 * 
-	 * @return precondition of this operator
-	 */
-	public abstract Condition getPrecondition();
-    
-	/**
-	 * String representation of this operator.
-	 * 
-	 * @return name of the operator
-	 */
-	public String toString() {
-		return name;
-	}
-	
+
+    /**
+     * Operator.
+     * 
+     * @param name         name of the operator
+     * @param precondition precondition of the operator
+     * @param effect       effect of the operator
+     * @param observations variable-value pairs which could be observed by the operator
+     */
+    protected Operator(String name, Set<Pair<Integer, Integer>> observation, boolean isAbstracted, boolean isCausative, double cost) {
+        this.name = name;
+        // Note: If this operator has no observations, this map is empty.
+        this.observation = Collections.unmodifiableSet(observation);
+        this.isAbstracted = isAbstracted;
+        isSensing = !observation.isEmpty();
+        this.isCausative = isCausative;
+        this.cost = cost;
+    }
+
+    /**
+     * Get the precondition of this operator.
+     * 
+     * @return precondition of this operator
+     */
+    public abstract Condition getPrecondition();
+
+    /**
+     * String representation of this operator.
+     * 
+     * @return name of the operator
+     */
+    public String toString() {
+        return name;
+    }
+
     /**
      * Checks whether this operator is enabled in a given state,
      * i.e., if its preconditions are satisfied.
@@ -98,33 +98,33 @@ public abstract class Operator {
      * @return True iff this operator is enabled in the state
      */
     public boolean isEnabledIn(State state) {
-    	return getPrecondition().isSatisfiedIn(state);
+        return getPrecondition().isSatisfiedIn(state);
     }
 
-	/**
-	 * Abstract this operator to given pattern.
-	 * 
-	 * @param pattern
-	 * @return abstracted operator or null if resulting operator has no effects and no observations
-	 */
+    /**
+     * Abstract this operator to given pattern.
+     * 
+     * @param pattern
+     * @return abstracted operator or null if resulting operator has no effects and no observations
+     */
     public abstract Operator abstractToPattern(Set<Integer> pattern);
-    
+
     /**
      * True iff this operator is a determinized operator.
      * 
      * @return true iff this operator is determinized
      */
     public boolean isDeterminized() {
-    	return isDeterminized;
+        return isDeterminized;
     }
-    
+
     /**
      * Delete BDDs if they are used.
      * 
      * Warning: This operator can not be used anymore after calling this method.
      */
     public void free() {}
-    
+
     /**
      * Check that there are no duplicate names.
      * 
@@ -132,47 +132,47 @@ public abstract class Operator {
      * @return true iff each name is unique
      */
     public static boolean assertNoDuplicateInNames(Set<? extends Operator> ops) {
-    	Set<String> names = new HashSet<String>((int) (ops.size() * 0.75) + 1);
-    	for (Operator op : ops) {
-    		if (names.contains(op.name)) {
-    			System.err.println(op.name + " is a duplicate.");
-    			return false;
-    		}
-    		names.add(op.name);
-    	}
-    	return true;
+        Set<String> names = new HashSet<String>((int) (ops.size() * 0.75) + 1);
+        for (Operator op : ops) {
+            if (names.contains(op.name)) {
+                System.err.println(op.name + " is a duplicate.");
+                return false;
+            }
+            names.add(op.name);
+        }
+        return true;
     }
-    
+
     /**
      * Dumping method for debugging.
      */
     public abstract void dump();
-    
+
     /**
      * Get explicit description of this operator.
      * 
      * @return explicit operator.
      */
     public abstract ExplicitOperator getExplicitOperator();
-    
 
-//    public Set<Integer> getAffectedVariables() {
-//    	if (affectedVariables == null) {
-//        	affectedVariables = new HashSet<Integer>(Global.getCapacityForHashTable(Global.problem.numStateVars), Global.LOAD_FACTOR);
-//        	if (isSensing) {
-//        		for (Pair<Integer, Integer> varVal : observation) {
-//        			affectedVariables.add(varVal.first);
-//        		}
-//        	}
-//        	if (isCausative) {
-//        		for (Set<ExplicitEffect> choice : nondeterministicEffect) {
-//        			for (ExplicitEffect eff : choice)
-//        				affectedVariables.add(eff.variable);
-//        		}
-//        	}
-//        	affectedVariables = Collections.unmodifiableSet(affectedVariables);
-//    	}
-//    	return affectedVariables;
+
+    //    public Set<Integer> getAffectedVariables() {
+    //    	if (affectedVariables == null) {
+    //        	affectedVariables = new HashSet<Integer>(Global.getCapacityForHashTable(Global.problem.numStateVars), Global.LOAD_FACTOR);
+    //        	if (isSensing) {
+    //        		for (Pair<Integer, Integer> varVal : observation) {
+    //        			affectedVariables.add(varVal.first);
+    //        		}
+    //        	}
+    //        	if (isCausative) {
+    //        		for (Set<ExplicitEffect> choice : nondeterministicEffect) {
+    //        			for (ExplicitEffect eff : choice)
+    //        				affectedVariables.add(eff.variable);
+    //        		}
+    //        	}
+    //        	affectedVariables = Collections.unmodifiableSet(affectedVariables);
+    //    	}
+    //    	return affectedVariables;
     //    }
 
     /**
@@ -181,50 +181,43 @@ public abstract class Operator {
      * @return Set of affected variables.
      */
     public Set<Integer> getAffectedVariables() {
-    	return affectedVariables;
+        return affectedVariables;
     }
-    
+
     /**
      * Get the operator's name.
      * 
      * @return
      */
     public String getName() {
-    	return name;
+        return name;
     }
-    
+
     /**
      * Set the operator's name.
      * 
      * @param name
      */
     public void setName(String name) {
-    	this.name = name;
+        this.name = name;
     }
-    
+
     /**
      * Return a copy of this operator.
      * 
      * @return
      */
     public abstract Operator copy();
-    
+
     /**
      * Get cost of this operator.
      * 
      * @return cost
      */
-    public int getCost() {
-    	return cost;
+    public double getCost() {
+        return cost;
     }
-    
-    /**
-     * Set cost of this operator.
-     * 
-     * @param cost
-     */
-    public void setCost(int cost) {
-    	this.cost = cost;
-    }
+
+    public abstract void setCost(double cost);
 
 }

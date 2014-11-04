@@ -21,7 +21,7 @@ public class GraphvizWriter {
      * Search manager
      */
     AOStarSearch search;
-    
+
     /**
      * Create a new Graphviz writer for a given search manager instance.
      * 
@@ -31,7 +31,7 @@ public class GraphvizWriter {
     public GraphvizWriter(AOStarSearch search) {
         this.search = search;
     }
-    
+
     /**
      * Create a description of the current search graph in GraphViz (dot)
      * format. Nodes are identified and printed by giving the underlying
@@ -85,42 +85,43 @@ public class GraphvizWriter {
             buffer.append(node.index);
             buffer.append(" [ peripheries=\"1\", shape=\"rectangle\", ");
             if (node.isGoalNode) {
-            	buffer.append("fontcolor=\"white\", style=\"filled\", fillcolor=\"blue\", ");
+                buffer.append("fontcolor=\"white\", style=\"filled\", fillcolor=\"blue\", ");
             }
             else {
                 if (!node.isProven) {
-                	if (node.isDisproven && !node.isExpanded()) {
-                		buffer.append("style=\"filled\", fillcolor=\"red\", ");
-                	}
-                	else if ((node.isDisproven && node.isExpanded())) {
-                		buffer.append("style=\"filled,rounded\", fillcolor=\"red\", ");
-                	}
-                	else if (!node.isExpanded()) {
-                		buffer.append("style=\"filled\", fillcolor=\"yellow\", ");
-                	}
-                	else {
-                		buffer.append("style=\"rounded\", ");
-                	}
+                    if (node.isDisproven && !node.isExpanded()) {
+                        buffer.append("style=\"filled\", fillcolor=\"red\", ");
+                    }
+                    else if ((node.isDisproven && node.isExpanded())) {
+                        buffer.append("style=\"filled,rounded\", fillcolor=\"red\", ");
+                    }
+                    else if (!node.isExpanded()) {
+                        buffer.append("style=\"filled\", fillcolor=\"yellow\", ");
+                    }
+                    else {
+                        buffer.append("style=\"rounded\", ");
+                    }
                 }
                 else {
-                	if (!node.isExpanded()) {
-                		buffer.append("style=\"filled\", fillcolor=\"green\", ");
+                    if (!node.isExpanded()) {
+                        buffer.append("style=\"filled\", fillcolor=\"green\", ");
                     }
-                	else {
-                		buffer.append("style=\"filled,rounded\", fillcolor=\"green\", ");
-                	}
+                    else {
+                        buffer.append("style=\"filled,rounded\", fillcolor=\"green\", ");
+                    }
                 }
             }
             buffer.append("label=\"");
             assert Global.problem.isFullObservable;
+            buffer.append("cost estimate: " + node.costEstimate + "\\n");
             for (int i = 0; i < ((ExplicitState) node.state).size - 1; i++) {
-            	String tmp = Global.problem.propositionNames.get(i).get(((ExplicitState) node.state).variableValueAssignment.get(i));
-    			if (! tmp.startsWith("(not"))
-    			{
-    				buffer.append(tmp);
-    				buffer.append("\\n");
-    			}
-			}
+                String tmp = Global.problem.propositionNames.get(i).get(((ExplicitState) node.state).variableValueAssignment.get(i));
+                if (! tmp.startsWith("(not"))
+                {
+                    buffer.append(tmp);
+                    buffer.append("\\n");
+                }
+            }
             buffer.append(Global.problem.propositionNames.get(((ExplicitState) node.state).size - 1).get(((ExplicitState) node.state).variableValueAssignment.get(((ExplicitState) node.state).size - 1)));
             buffer.append("\" ]\n");
         }
@@ -133,13 +134,13 @@ public class GraphvizWriter {
                 buffer.append(connector.operator.getName());
                 buffer.append("\"");
                 if (complete && connector.equals(connector.parent.markedConnector) && connector.isSafe) {
-                	buffer.append(", style=\"bold\", color=\"red:blue\" ");
+                    buffer.append(", style=\"bold\", color=\"red:blue\" ");
                 }
                 else if (complete && connector.equals(connector.parent.markedConnector) && !connector.isSafe) {
-                	buffer.append(", style=\"bold\", color=\"red\" ");
+                    buffer.append(", style=\"bold\", color=\"red\" ");
                 }
                 else if (connector.isSafe) {
-                	buffer.append(", style=\"bold\", color=\"blue\" ");
+                    buffer.append(", style=\"bold\", color=\"blue\" ");
                 }
                 buffer.append(" ]\n");
             }

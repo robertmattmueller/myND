@@ -21,15 +21,15 @@ import mynd.state.State;
  */
 class Connector {
 
-    Node      parent;
+    Node parent;
     Set<Node> children;
-    String    name;
-    int       unsatisfiedPreconditionCount;
-    int cost;
+    String name;
+    int unsatisfiedPreconditionCount;
+    double cost;
 
     boolean   isSafe = false;
 
-    public Connector(Node parent, Set<Node> children, String name, int cost) {
+    public Connector(Node parent, Set<Node> children, String name, double cost) {
         this.parent = parent;
         this.children = children;
         parent.outgoingConnectors.add(this);

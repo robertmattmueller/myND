@@ -23,7 +23,7 @@ public class AOStarNode extends AbstractNode implements Comparable<AOStarNode> {
      * Cost estimate of this node
      */
     double         costEstimate;
-    
+
     /**
      * Weak goal distance of this node.
      */
@@ -54,18 +54,18 @@ public class AOStarNode extends AbstractNode implements Comparable<AOStarNode> {
      */
     public AOStarNode(State state, AOStarSearch searchManager, int depth) {
         super(state, depth);
-    	if (searchManager.estimator == null) {
-    		searchManager.estimator = new ZeroHeuristic();
-    	}
+        if (searchManager.estimator == null) {
+            searchManager.estimator = new ZeroHeuristic();
+        }
         heuristic = (int) searchManager.estimator.getHeuristic(state);
         costEstimate = heuristic;
         isProven = state.isGoalState();
         isGoalNode = state.isGoalState();
         if (isGoalNode) {
-        	weakGoalDistance = 0;
+            weakGoalDistance = 0;
         }
         else {
-        	weakGoalDistance = Double.POSITIVE_INFINITY;
+            weakGoalDistance = Double.POSITIVE_INFINITY;
         }
         // FIXME: Assumption that dead ends are reliable
         isDisproven = costEstimate == AbstractNode.DISPROVEN;
@@ -78,44 +78,44 @@ public class AOStarNode extends AbstractNode implements Comparable<AOStarNode> {
     public String toString() {
         return state.toString() + ":" + costEstimate + " (depth: " + getDepth() + ", h-value: " + heuristic + ", index: " + index + ")";
     }
-    
+
     public int getHeuristic() {
-    	return heuristic;
+        return heuristic;
     }
 
     /**
      * Prefer nodes with higher h-value.
      */
-	public int compareTo(AOStarNode o) {
-		return o.heuristic - heuristic;
-	}
-	
-	/**
-	 * Get marked connector of this AO* node.
-	 * 
-	 * @return marked connector.
-	 */
-	public Connector getMarkedConnector() {
-		return markedConnector;
-	}
-	
-	public void setMarkedConnector(Connector c) {
-		this.markedConnector = c;
-	}
-	
-	/**
-	 * Get incoming connectors of this AO* node.
-	 * @return
-	 */
-	public Set<Connector> getIncomingConnectors() {
-		return incomingConnectors;
-	}
-	
-	/**
-	 * Get outgoing connectors of this AO* node.
-	 * @return
-	 */
-	public Set<Connector> getOutgoingConnectors() {
-		return outgoingConnectors;
-	}
+    public int compareTo(AOStarNode o) {
+        return o.heuristic - heuristic;
+    }
+
+    /**
+     * Get marked connector of this AO* node.
+     * 
+     * @return marked connector.
+     */
+    public Connector getMarkedConnector() {
+        return markedConnector;
+    }
+
+    public void setMarkedConnector(Connector c) {
+        this.markedConnector = c;
+    }
+
+    /**
+     * Get incoming connectors of this AO* node.
+     * @return
+     */
+    public Set<Connector> getIncomingConnectors() {
+        return incomingConnectors;
+    }
+
+    /**
+     * Get outgoing connectors of this AO* node.
+     * @return
+     */
+    public Set<Connector> getOutgoingConnectors() {
+        return outgoingConnectors;
+    }
 }

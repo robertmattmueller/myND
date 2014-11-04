@@ -15,16 +15,16 @@ import mynd.state.Operator;
 
 public class Connector {
 
-    Node           parent;
-    Set<Node>      children;
+    Node parent;
+    Set<Node> children;
 
     /**
      * Operator which corresponds to this connector.
      */
     Operator operator; 
 
-    int            unsatisfiedPreconditionCount;
-    int            baseCost;
+    int unsatisfiedPreconditionCount;
+    double baseCost;
 
     public boolean isSafe = false;
 
@@ -86,11 +86,11 @@ public class Connector {
         this.unsatisfiedPreconditionCount = unsatisfiedPreconditionCount;
     }
     
-    public void setBaseCost(int baseCost) {
+    public void setBaseCost(double baseCost) {
     	this.baseCost = baseCost;
     }
     
-    public int getBaseCost() {
+    public double getBaseCost() {
     	return this.baseCost;
     }
 

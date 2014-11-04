@@ -7,8 +7,10 @@ import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
 
 import mynd.heuristic.FFHeuristic;
+import mynd.heuristic.HMaxHeuristic;
 import mynd.heuristic.Heuristic;
 import mynd.heuristic.ZeroHeuristic;
+import mynd.heuristic.FFHeuristic.RPGStrategy;
 import mynd.heuristic.Heuristic.HeuristicStrategy;
 import mynd.heuristic.pdb.CanonicalPDBHeuristic;
 import mynd.heuristic.pdb.PDB;
@@ -40,7 +42,7 @@ public class MyNDPlanner {
      * Heuristic estimator to be used.
      */
     public enum HeuristicEstimator {
-        FF_HEURISTIC, PDBS_HEURISTIC, ZERO_HEURISTIC
+        FF_HEURISTIC, PDBS_HEURISTIC, ZERO_HEURISTIC, HMAX_Heuristic
     };
 
     /**
@@ -166,6 +168,10 @@ public class MyNDPlanner {
             // FF-heuristic.
             else if (opt.equals("ff")) {
                 heuristicEstimator = HeuristicEstimator.FF_HEURISTIC;
+            }           
+            // hmax heuristic.
+            else if (opt.equals("hmax")) {
+                heuristicEstimator = HeuristicEstimator.HMAX_Heuristic;
             }
             // World state sampling options.
             else if (opt.equals("max")) {
@@ -275,9 +281,6 @@ public class MyNDPlanner {
             else if (opt.equals("improvePlan")) {
             	// Be careful. This option leads to a much slower AO*-search.
             	AOStarSearch.fastUpdate = false;
-            }
-            else if (opt.equals("preferDeterministicOps")) {
-            	AOStarSearch.preferDeterministicOps = true;
             }
             // (L)AO*-search options
             else if (opt.equals("restrictSensing")) {
@@ -418,7 +421,7 @@ public class MyNDPlanner {
             switch (heuristicEstimator) {
                 case FF_HEURISTIC:
                 	System.err.println("Heuristic: FF-heuristic.");
-                    heuristic = new FFHeuristic();
+                    heuristic = new FFHeuristic(RPGStrategy.FF);
                     break;
                 case PDBS_HEURISTIC:
                 	System.err.println("Heuristic: Canonical PDB-heuristic.");
@@ -427,6 +430,10 @@ public class MyNDPlanner {
                 case ZERO_HEURISTIC:
                 	System.err.println("Heuristic: Zero-heuristic.");
                     heuristic = new ZeroHeuristic();
+                    break;
+                case HMAX_Heuristic:
+                    System.err.println("Heuristic: HMAX heuristic.");
+                    heuristic = new HMaxHeuristic();
                     break;
                 default:
                     assert false;
@@ -476,8 +483,6 @@ public class MyNDPlanner {
         }
 
         printGCStats();
-        
-        //Global.problem.destroy();
         
         return planFound == AbstractSearch.PROTAGONIST_WINS;
     }

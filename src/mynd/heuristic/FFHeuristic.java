@@ -2,9 +2,14 @@ package mynd.heuristic;
 
 import java.util.ArrayList;
 import java.util.Collection;
+import java.util.Collections;
+import java.util.HashMap;
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
+import java.util.PriorityQueue;
 import java.util.Set;
 
 import mynd.Global;
@@ -28,32 +33,45 @@ import mynd.util.Pair;
 public class FFHeuristic extends Heuristic {
 
     /**
-     * Cost of a goal rule (zero)
-     */
-    private static final int        GOAL_RULE_COST = 0;
-
-    /**
      * List of all rules
      */
-    List<FFRule>                    rules;
+    List<FFRule> rules;
 
     /**
      * Mapping from variable indices to mappings from value indices to FF
      * propositions
      */
-    List<List<FFProposition>>       variableValueToProposition;
+    private List<List<FFProposition>> variableValueToProposition;
 
     /**
      * Queue containing all reachable FF propositions.
      */
-    FFReachableQueue<FFProposition> reachableQueue;
+    private PriorityQueue<FFProposition> reachableQueue;
 
     /**
      * FFProposition corresponding to goal. This is either the auxiliary
      * variable corresponding to the conjunction of the goal atoms or the
      * variable corresponding to the root node of BDD.
      */
-    FFProposition                   goalProp       = null;
+    final FFProposition goalProp;
+
+    /**
+     * How to accumulate heuristic values using the relaxed planning graph.
+     */
+    public enum RPGStrategy {
+        MAX, FF
+    };
+    
+    /**
+     * The strategy that is used to evaluate the relaxed planning graph.
+     * By default FF is used.
+     */
+    RPGStrategy strategy = RPGStrategy.FF;
+    
+    /**
+     * Set DEBUG true for more outputs.
+     */
+    public static boolean DEBUG = false;
 
     /**
      * Create a new FF heuristic evaluator for a given problem.
@@ -61,13 +79,15 @@ public class FFHeuristic extends Heuristic {
      * @param problem
      *            The problem for which to compute heuristic estimates
      */
-    public FFHeuristic() {
+    public FFHeuristic(RPGStrategy strategy) {
     	super(true); // FF heuristic supports axioms.
-        reachableQueue = new FFReachableQueue<FFProposition>();
+    	this.strategy = strategy;
+    	reachableQueue = new PriorityQueue<FFProposition>();
         buildPropositions();
-        buildGoalPropositions();
+        goalProp = buildGoalPropositions();
         buildRules();
         buildGoalRules(Global.problem.explicitGoal);
+        rules = Collections.unmodifiableList(rules);
     }
 
     /**
@@ -80,12 +100,12 @@ public class FFHeuristic extends Heuristic {
      * @param cost
      *            Base cost of the rule
      */
-    private void addRule(FFProposition head, Collection<Pair<Integer, Integer>> opBody, int cost) {
+    private void addRule(FFProposition head, Collection<Pair<Integer, Integer>> opBody, ExplicitOperator op) {
         List<FFProposition> body = new ArrayList<FFProposition>();
         for (Pair<Integer, Integer> opCondition : opBody) {
             body.add(getProposition(opCondition));
         }
-        addRule(head, body, cost);
+        addRule(head, body, op);
     }
 
     /**
@@ -98,8 +118,8 @@ public class FFHeuristic extends Heuristic {
      * @param cost
      *            Base cost of the rule
      */
-    private void addRule(FFProposition head, List<FFProposition> body, int cost) {
-        FFRule rule = new FFRule(body, head, cost);
+    private void addRule(FFProposition head, List<FFProposition> body, ExplicitOperator op) {
+        FFRule rule = new FFRule(body, head, op);
         rules.add(rule);
         for (FFProposition condition : body) {
             condition.preconditionOf.add(rule);
@@ -107,18 +127,18 @@ public class FFHeuristic extends Heuristic {
     }
 
     /**
-     * Add a rule with given head, body, and base cost to the rule base.
+     * Add a rule with given head, body, and operator to the rule base.
      * 
      * @param opHead
      *            Head of the rule
      * @param opBody
      *            Body of the rule
-     * @param cost
-     *            Base cost of the rule
+     * @param op
+     *            Operator defined the rule
      */
-    private void addRule(Pair<Integer, Integer> opHead, Collection<Pair<Integer, Integer>> opBody, int cost) {
+    private void addRule(Pair<Integer, Integer> opHead, Collection<Pair<Integer, Integer>> opBody, ExplicitOperator op) {
         FFProposition head = getProposition(opHead);
-        addRule(head, opBody, cost);
+        addRule(head, opBody, op);
     }
 
     /**
@@ -127,11 +147,12 @@ public class FFHeuristic extends Heuristic {
      * @param problem
      *            The problem
      */
-    private void buildGoalPropositions() {
+    private FFProposition buildGoalPropositions() {
     	List<FFProposition> goalPropositions = new ArrayList<FFProposition>();
-    	goalProp = new FFProposition(Global.problem.numStateVars, 1);
+    	FFProposition goalProp = new FFProposition(Global.problem.numStateVars, 1);
     	goalPropositions.add(goalProp);
     	variableValueToProposition.add(goalPropositions);
+    	return goalProp;
     }
 
     /**
@@ -143,7 +164,14 @@ public class FFHeuristic extends Heuristic {
      */
     private void buildGoalRules(ExplicitCondition goal) {
         List<Pair<Integer, Integer>> opBody = goal.getVariableValueAssignmentAsPairs();
-        addRule(goalProp, opBody, GOAL_RULE_COST);
+        
+        // create a dummy operator with operator cost = 0
+        Set<Pair<Integer, Integer>> obs = new HashSet<Pair<Integer, Integer>>();
+        Map<Integer, Integer> map = new HashMap<Integer, Integer>();
+        ExplicitCondition precondition = new ExplicitCondition(map);
+        ExplicitOperator goalOperator = new ExplicitOperator("goalRule", precondition, null, obs, false, 0);
+        
+        addRule(goalProp, opBody, goalOperator);
     }
 
     /**
@@ -174,15 +202,20 @@ public class FFHeuristic extends Heuristic {
         rules = new LinkedList<FFRule>();
         // Add rules for causative operators.
         for (Operator op : Global.problem.getOperators()) {
-        	if (op.isCausative) {
-        		buildRulesForOperator(op.getExplicitOperator());
-        	}
+            if (op.isCausative) {
+                buildRulesForOperator(op.getExplicitOperator());
+            }
         }
-        // Add rules for the axioms.
-        for (OperatorRule axiom : Global.problem.axioms) {
-        	addRule(axiom.head, axiom.body, 0);
+        // Add rules for the axioms. 
+        // TODO [issue #50]: Dummy operator is a hack. Fix it.
+        if (strategy == RPGStrategy.FF) {
+            for (OperatorRule axiom : Global.problem.axioms) {
+                addRule(axiom.head, axiom.body, axiom.getDummyOperator());
+            }
         }
         simplify();
+        // Sort rules by costs.
+        Collections.sort(rules);
     }
 
     /**
@@ -198,7 +231,7 @@ public class FFHeuristic extends Heuristic {
     private void buildRulesForOperator(ExplicitOperator op) {
         Collection<OperatorRule> opRules = op.getRules();
         for (OperatorRule opRule : opRules) {
-            addRule(opRule.head, opRule.body, op.getCost());
+            addRule(opRule.head, opRule.body, op);
         }
     }
 
@@ -216,7 +249,9 @@ public class FFHeuristic extends Heuristic {
         if (newRule != null) {
             collectedRules.add(newRule);
             for (FFProposition precondition : newRule.body) {
-                collectRequiredRules(precondition, collectedRules);
+                if (!collectedRules.contains(precondition.reachedBy)) {
+                    collectRequiredRules(precondition, collectedRules);
+                }
             }
         }
     }
@@ -230,19 +265,26 @@ public class FFHeuristic extends Heuristic {
      *         have been reached.
      */
     private boolean explore() {
-        for (int queuePos = 0; queuePos < reachableQueue.size(); queuePos++) {
-            FFProposition prop = reachableQueue.get(queuePos);
-
-            if (prop.equals(goalProp)) {
-                return true;
-            }
-
-            for (FFRule rule : prop.preconditionOf) {
-                rule.unsatisfiedPreconditions--;
-                assert rule.unsatisfiedPreconditions >= 0;
-                if (rule.unsatisfiedPreconditions == 0) {
-                    triggerRule(rule);
+        if (DEBUG) {
+            System.out.println("Reachable queue: " + reachableQueue);
+        }
+        HashSet<FFProposition> seen = new HashSet<FFProposition>();
+        while (!reachableQueue.isEmpty()) {
+            FFProposition prop = reachableQueue.poll();
+            
+            if (!seen.contains(prop)) {
+                if (prop.equals(goalProp)) {
+                    return true;
                 }
+
+                for (FFRule rule : prop.preconditionOf) {
+                    rule.unsatisfiedPreconditions--;
+                    assert rule.unsatisfiedPreconditions >= 0;
+                    if (rule.unsatisfiedPreconditions == 0) {
+                        triggerRule(rule);
+                    }
+                }
+                seen.add(prop);
             }
         }
 
@@ -270,17 +312,20 @@ public class FFHeuristic extends Heuristic {
         }
 
         collectRequiredRules(goalProposition, requiredRules);
+        if (DEBUG) {
+            System.out.println("FF: Required rules collected.");
+        }
         assert requiredRules.size() >= 1;
         int cost = 0;
         for (FFRule rule : requiredRules) {
-            cost += rule.baseCost;
+            cost += rule.operator.getCost();
         }
         return cost;
     }
-
+    
     /**
-     * Compute the FF heuristic estimate of a given state.
-     * 
+     * Compute the heuristic estimate of a given state.
+     *
      * @param state
      *            The state for which to compute the heuristic estimate
      * @return The evaluation of the given state, i.e., the length of a relaxed
@@ -288,15 +333,35 @@ public class FFHeuristic extends Heuristic {
      *         relaxed planning graph exploration has levelled off without
      *         reaching all the goals.
      */
-    public int getFFHeuristic(ExplicitState state) {
+    public double getRPGHeuristic(ExplicitState state) {
         assert reachableQueue.isEmpty();
         initializePropositions(state);
+        if (DEBUG) {
+            System.out.println("FF: Propositions initialized.");
+        }
         initializeRules();
+        if (DEBUG) {
+            System.out.println("FF: Rules initialized.");
+        }
 
         boolean solvable = explore();
+        if (DEBUG) {
+            System.out.println("FF: Exploration done. Result solvable is " + solvable);
+        }
         reachableQueue.clear();
 
-        int result = solvable ? extractFFValue() : Integer.MAX_VALUE;
+        double result = INFINITE_HEURISTIC;
+        switch(strategy){
+            case FF:
+                result = solvable ? extractFFValue() : INFINITE_HEURISTIC;
+                if (DEBUG) {
+                    System.out.println("FF: extractFFValue done.");
+                }
+                break;
+            case MAX:
+                result = solvable ? goalProp.reachCost : INFINITE_HEURISTIC;
+                break;
+        }
         return result;
     }
 
@@ -308,21 +373,25 @@ public class FFHeuristic extends Heuristic {
      */
     @Override
     public double getHeuristic(State state) {
-    	if (state instanceof ExplicitState)
-    		return getFFHeuristic((ExplicitState) state);
-    	
-    	// State is a belief state. 
-    	switch(Heuristic.heuristicStrategy) {
-		case ADD:
-			return HeuristicValueAggregation.add((((BeliefState) state).getRandomExplicitWorldStates(numberOfWorldStatesToBeSampled)), this);
-		case AVERAGE:
-			return HeuristicValueAggregation.average(((BeliefState) state).getRandomExplicitWorldStates(numberOfWorldStatesToBeSampled), this);
-		case MAX:
-			return HeuristicValueAggregation.maximize(((BeliefState) state).getRandomExplicitWorldStates(numberOfWorldStatesToBeSampled), this);
-		default:
-			assert false;
-			return -1;
-    	}
+        if (DEBUG) {
+            System.out.println("FF: getHeuristic called");
+        }
+        if (state instanceof ExplicitState) {
+            return getRPGHeuristic((ExplicitState) state);
+        }
+
+        // State is a belief state. 
+        switch(Heuristic.heuristicStrategy) {
+        case ADD:
+            return HeuristicValueAggregation.add((((BeliefState) state).getRandomExplicitWorldStates(numberOfWorldStatesToBeSampled)), this);
+        case AVERAGE:
+            return HeuristicValueAggregation.average(((BeliefState) state).getRandomExplicitWorldStates(numberOfWorldStatesToBeSampled), this);
+        case MAX:
+            return HeuristicValueAggregation.maximize(((BeliefState) state).getRandomExplicitWorldStates(numberOfWorldStatesToBeSampled), this);
+        default:
+            assert false;
+            return -1;
+        }
     }
 
     /**
@@ -334,7 +403,7 @@ public class FFHeuristic extends Heuristic {
      *            Value
      * @return The FF proposition corresponding to the given variable-value pair
      */
-    private FFProposition getProposition(int variable, int value) {
+    FFProposition getProposition(int variable, int value) {
         return variableValueToProposition.get(variable).get(value);
     }
 
@@ -361,21 +430,17 @@ public class FFHeuristic extends Heuristic {
             int value = state.variableValueAssignment.get(var);
             assert value >= 0;
             for (FFProposition prop : variableValueToProposition.get(var)) {
-            	//System.out.println(prop);
                 prop.reachedBy = null;
                 prop.reachCost = FFProposition.INFINITE_REACH_COST;
-                //System.out.println(prop.reachCost);
             }
             FFProposition currentProp = getProposition(var, value);
-            // System.out.println("currentProp: " + currentProp);
             currentProp.reachCost = 0;
-            
-            if (!reachableQueue.contains(currentProp)) {
-                reachableQueue.add(currentProp);
-            }
+
+            assert (!reachableQueue.contains(currentProp));
+            reachableQueue.add(currentProp);
         }
         assert goalProp != null;
-        goalProp.reachedBy = null;
+        goalProp.reachedBy = null; // reset goal proposition
         goalProp.reachCost = FFProposition.INFINITE_REACH_COST;
     }
 
@@ -409,17 +474,46 @@ public class FFHeuristic extends Heuristic {
      */
     private void triggerRule(FFRule rule) {
         FFProposition effect = rule.head;
-        if (effect.reachCost == FFProposition.INFINITE_REACH_COST) {
-            effect.reachedBy = rule;
-            int cost = rule.baseCost;
-            
-            for (FFProposition condition : rule.body) {  	
-                //assert condition.reachCost >= 0; // TODO [issue #24] @Robert: Handling of costs in FF.
-                cost += condition.reachCost;
+        switch (strategy) {
+        case FF:
+            if (effect.reachCost == FFProposition.INFINITE_REACH_COST) {
+                effect.reachedBy = rule;
+                double cost = rule.operator.getCost();
+                for (FFProposition condition : rule.body) {
+                    if (cost + condition.reachCost > 0) {
+                        cost += condition.reachCost;
+                    }
+                }
+                effect.reachCost = cost;
+                reachableQueue.add(effect);
             }
-            effect.reachCost = cost;
-        
-            reachableQueue.add(effect);
+            break;
+        case MAX:
+            //effect.reachedBy = rule;
+            if (DEBUG) {
+                System.out.println("case MAX: trigger rule for effect " + effect + " of op " + rule.operator);
+            }
+            double cost = rule.operator.getCost();
+            double maxCost = 0;
+            for (FFProposition condition : rule.body) {
+                if (condition.reachCost > maxCost){
+                    maxCost = condition.reachCost;
+                }
+            }
+            if (DEBUG) {
+                System.out.println("cost is " + cost);
+            }
+            if ((cost + maxCost) < effect.reachCost || effect.reachCost == FFProposition.INFINITE_REACH_COST){
+                effect.reachedBy = rule;
+                cost += maxCost;
+                assert cost >= 0 : "cost is " + cost + " and max cost is " + maxCost;
+                effect.reachCost = cost;
+                reachableQueue.add(effect);
+            }
+            if (DEBUG) {
+                System.out.println("Cost of this effect " + cost);
+            }
+            break;
         }
     }
 
@@ -432,42 +526,52 @@ public class FFHeuristic extends Heuristic {
  * 
  * @author Robert Mattmueller
  */
-class FFProposition {
+class FFProposition implements Comparable<FFProposition> {
 	
     /**
      * Indicates invalid reachability cost.
      */
-    public static final int INVALID_REACH_COST  = -2;
+    public static final double INVALID_REACH_COST = -1;
 
     /**
      * Indicates infinite reachability cost.
      */
-    public static final int INFINITE_REACH_COST = -1;
+    public static final double INFINITE_REACH_COST = Double.POSITIVE_INFINITY;
+    
+    /**
+     * Used to mark proposition nodes in search graph.
+     */
+    boolean markedForwards = false;
+
+    /**
+     * Used to mark proposition nodes in search graph.
+     */
+    boolean markedBackwards = false;
 
     /**
      * The list of FF rules in whose body this proposition occurs.
      */
-    List<FFRule>            preconditionOf;
+    List<FFRule> preconditionOf;
 
     /**
      * The FF rule by which this proposition was reached.
      */
-    FFRule                  reachedBy;
+    FFRule reachedBy;
 
     /**
      * The cost to reach this proposition.
      */
-    int                     reachCost;
+    double reachCost;
 
     /**
      * Variable represented by the variable-value pair of this proposition.
      */
-    int                     var;
+    int var;
 
     /**
      * Value represented by the variable-value pair of this proposition.
      */
-    int                     value;
+    int value;
 
     /**
      * Creates an FF proposition for a given variable-value pair.
@@ -489,112 +593,19 @@ class FFProposition {
     public String toString() {
         return var + ":" + value;
     }
+
+    @Override
+    public int compareTo(FFProposition o) {
+        if (reachCost < o.reachCost) {
+            return -1;
+        }
+        else if (reachCost > o.reachCost) {
+            return 1;
+        }
+        return 0;
+    }
 }
 
-/**
- * Queue containing all reached propositions. Propositions are processed in the
- * order in which they were inserted (= reached).
- * 
- * Additional set representation for fast membership test
- */
-class FFReachableQueue<E> {
-
-    /**
-     * Underlying list representation
-     */
-    private List<E> list;
-
-    /**
-     * Underlying set representation (for fast membership test)
-     */
-    private Set<E>  set;
-
-    /**
-     * Creates a new empty reachability queue.
-     */
-    public FFReachableQueue() {
-        list = new ArrayList<E>();
-        set = new LinkedHashSet<E>();
-    }
-
-    /**
-     * Add an element to the end of this queue.
-     * 
-     * @param e
-     *            Element
-     * @return True iff <tt>e</tt> was successfully added to this queue.
-     */
-    public boolean add(E e) {
-        boolean b1 = list.add(e);
-        boolean b2 = set.add(e);
-        assert b1 == b2; // TODO [issue #24] @Robert: Handling of costs in FF.
-        if (b1 != b2) {
-            System.err.println("ERROR in FFReachableQueue.add(): different results of adding to list and to set.");
-            System.exit(-1);
-        }
-        return b1 && b2;
-    }
-
-    /**
-     * Clear this queue.
-     */
-    public void clear() {
-        list.clear();
-        set.clear();
-    }
-
-    /**
-     * Membership test
-     * 
-     * @param e
-     *            Element
-     * @return True iff <tt>e</tt> is contained in this queue.
-     */
-    public boolean contains(E e) {
-        return set.contains(e);
-    }
-
-    /**
-     * Get the element at a specified position in this queue.
-     * 
-     * @param index
-     *            The position from which to retrieve the element.
-     * @return The element at position <tt>index</tt> in this queue.
-     */
-    public E get(int index) {
-        return list.get(index);
-    }
-
-    /**
-     * Test this queue for emptyness.
-     * 
-     * @return True iff this queue is empty.
-     */
-    public boolean isEmpty() {
-        boolean b1 = list.isEmpty();
-        boolean b2 = set.isEmpty();
-        if (b1 != b2) {
-            System.err.println("ERROR in FFReachableQueue.isEmpty(): different results for list and set.");
-            System.exit(-1);
-        }
-        return b1;
-    }
-
-    /**
-     * Get the number of elements held in this queue.
-     * 
-     * @return The number of elements in this queue
-     */
-    public int size() {
-        int n1 = list.size();
-        int n2 = set.size();
-        if (n1 != n2) {
-            System.err.println("ERROR in FFReachableQueue.size(): different results for list and set.");
-            System.exit(-1);
-        }
-        return n1;
-    }
-}
 
 /**
  * An FF rule is a rule (head :- body) where the body is the precondition of an
@@ -602,13 +613,13 @@ class FFReachableQueue<E> {
  * 
  * @author Robert Mattmueller
  */
-class FFRule {
+class FFRule implements Comparable<FFRule> {
     
     /**
      * Indicates that the counter of unsatisfied preconditions of a rule has not
      * yet been initialized.
      */
-    public static final int   INVALID_PRECONDITION_COUNT = -1;
+    public static final int INVALID_PRECONDITION_COUNT = -1;
 
     /**
      * Preconditions / body of this rule.
@@ -618,19 +629,19 @@ class FFRule {
     /**
      * Effect / head of this rule.
      */
-    FFProposition             head;
+    FFProposition head;
 
     /**
      * Number of preconditions of this rule which are still unsatisfied. This
      * number is decreased during the exploration of the relaxed planning graph
-     * until it drops to zero und this rule triggers.
+     * until it drops to zero and this rule triggers.
      */
-    int                       unsatisfiedPreconditions;
+    int unsatisfiedPreconditions;
 
     /**
-     * Base cost of this rule.
+     * Explicit operator to which this rule belongs.
      */
-    int                       baseCost;
+    ExplicitOperator operator;
 
     /**
      * Creates a new FF rule with a given body, head, and base cost.
@@ -642,31 +653,31 @@ class FFRule {
      * @param baseCost
      *            Base cost of this rule
      */
-    public FFRule(Collection<FFProposition> body, FFProposition head, int baseCost) {
+    public FFRule(Collection<FFProposition> body, FFProposition head, ExplicitOperator op) {
         this.body = body;
         this.head = head;
         unsatisfiedPreconditions = INVALID_PRECONDITION_COUNT;
-        this.baseCost = baseCost;
+        operator = op;
     }
-
-//    /**
-//     * Get the body of this rule.
-//     */
-//    @Override
-//    public Collection<FFProposition> getBody() {
-//        return body;
-//    }
-//
-//    /**
-//     * Get the head of this rule.
-//     */
-//    @Override
-//    public FFProposition getHead() {
-//        return head;
-//    }
 
     @Override
     public String toString() {
         return "[FFRule] " + head + " :- " + body;
+    }
+
+    @Override
+    public int compareTo(FFRule o) {
+        if (operator.getCost() < o.operator.getCost()) {
+            return -1;
+        }
+        if (operator.getCost() > o.operator.getCost()) {
+            return 1;
+        }
+        return 0;
+    }
+    
+    public void dump() {
+        System.out.println(this);
+        System.out.println("corresponding operator: " + operator + " with cost " + operator.getCost());
     }
 }
