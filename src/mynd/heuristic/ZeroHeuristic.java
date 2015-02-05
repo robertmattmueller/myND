@@ -1,5 +1,7 @@
 package mynd.heuristic;
 
+import mynd.Global;
+import mynd.state.Condition;
 import mynd.state.State;
 
 /**
@@ -9,8 +11,16 @@ import mynd.state.State;
  */
 public class ZeroHeuristic extends Heuristic {
 	
+	private Condition goal;
+	
 	public ZeroHeuristic() {
 		super(true); // Zero heuristic supports axioms.
+		goal = Global.problem.getGoal();
+	}
+	
+	public ZeroHeuristic(Condition goal) {
+		super(true); // Zero heuristic supports axioms.
+		this.goal = goal;
 	}
 
     /**
@@ -21,12 +31,10 @@ public class ZeroHeuristic extends Heuristic {
      */
     @Override
     public double getHeuristic(State state) {
-        if (state.isGoalState()) {
-            return 0.0;
-        }
-        else {
-            return 1.0;
-        }
+    	if (goal.isSatisfiedIn(state)) {
+    		return 0.0;
+    	}
+    	return 1.0;
     }
 
 }

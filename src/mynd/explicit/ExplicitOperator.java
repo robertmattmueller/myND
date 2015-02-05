@@ -30,7 +30,7 @@ public class ExplicitOperator extends Operator {
      * 
      * @author Robert Mattmueller
      */
-    public class OperatorRule {
+    public static class OperatorRule {
 
         public final Set<Pair<Integer, Integer>> body;
 
@@ -45,11 +45,6 @@ public class ExplicitOperator extends Operator {
         public OperatorRule(Set<Pair<Integer, Integer>> body, Pair<Integer, Integer> head) {
             this.body = Collections.unmodifiableSet(body);
             this.head = head;
-        }
-        
-        // TODO: This is a hack for FF/LM-Cut-Heuristic. Fix it.
-        public ExplicitOperator getDummyOperator() {
-            return new ExplicitOperator("Dummy", null, null, null, false, 0);
         }
 
         /**
@@ -199,7 +194,6 @@ public class ExplicitOperator extends Operator {
      */
     @Override
     public ExplicitOperator abstractToPattern(Set<Integer> pattern) {
-        assert (!isDeterminized); // A determinized Operator must not be abstracted.
         if (DEBUG) {
             System.out.println();
             System.out.println("abstract following operator to pattern: " + pattern);
@@ -240,8 +234,9 @@ public class ExplicitOperator extends Operator {
         if (observation.size() > 0) {
             // Abstract observations.
             for (Pair<Integer, Integer> varVal : observation) {
-                if (pattern.contains(varVal.first))
+                if (pattern.contains(varVal.first)) {
                     abstractedObservation.add(varVal);
+                }
             }
         }
         // If resulting operator has no effect and no observations, reject it!
@@ -279,9 +274,6 @@ public class ExplicitOperator extends Operator {
         }
         ExplicitOperator other = (ExplicitOperator) o;
         if (isDeterminized != other.isDeterminized) {
-            return false;
-        }
-        if (isAbstracted != other.isAbstracted) {
             return false;
         }
         if (!observation.equals(other.observation)) {

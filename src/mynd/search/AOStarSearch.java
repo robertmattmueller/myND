@@ -830,21 +830,21 @@ public class AOStarSearch extends HeuristicSearch {
                 ++proven;
             }
         }
-        System.err.println("Out of " + stateNodeMap.size()
+        System.out.println("Out of " + stateNodeMap.size()
                 + " nodes, " + proven + " are proven");
-        System.err.println("Number of node expansions: " + NODE_EXPANSIONS);
+        System.out.println("Number of node expansions: " + NODE_EXPANSIONS);
         StateActionTable table = getExplicitStateActionTable();
-        System.err.println("Policy entries: " + table.getNumberOfEntries());
+        System.out.println("Policy entries: " + table.getNumberOfEntries());
         if (simulatePlan) {
             long simulatorTime = System.currentTimeMillis();
             double planCost = new PlanSimulator().performValueIteration(table);
             long simulatorEndTime = System.currentTimeMillis();
-            System.err.println("Plan cost (expected number of steps to goal): "
+            System.out.println("Plan cost (expected number of steps to goal): "
                     + planCost);
-            System.err.println("Plan simulator time: "
+            System.out.println("Plan simulator time: "
                     + (simulatorEndTime - simulatorTime) / 1000 + " seconds.");
         }
-        System.err.println("Number of sensing applications in policy: " + table.getNumberOfSensingApplication());
+        System.out.println("Number of sensing applications in policy: " + table.getNumberOfSensingApplication());
     }
 
     /**
@@ -857,7 +857,7 @@ public class AOStarSearch extends HeuristicSearch {
      *         occurred before proof.
      */
     @Override
-    public int run() {
+    public Result run() {
         // Start measuring search time.
         starttime = System.currentTimeMillis();
 
@@ -873,18 +873,17 @@ public class AOStarSearch extends HeuristicSearch {
         endtime = System.currentTimeMillis();
 
         if (initialNode.isProven) {
-            System.err
-            .println("\nResult: The protagonist has got a winning strategy.");
-            // printStats();
-            return AbstractSearch.PROTAGONIST_WINS;
+            System.out
+            .println("The protagonist has got a winning strategy.");
+            return Result.PROVEN;
         } else if (initialNode.isDisproven) {
-            System.err
-            .println("\nResult: The protagonist does not have a winning strategy.");
-            return AbstractSearch.ANTAGONIST_WINS;
+            System.out
+            .println("The protagonist does not have a winning strategy.");
+            return Result.DISPROVEN;
         } else {
-            System.err
-            .println("\nResult: No winning strategy for the protaginist found due to time-out.");
-            return AbstractSearch.TIMEOUT;
+            System.out
+            .println("No winning strategy for the protaginist found due to time-out.");
+            return Result.TIMEOUT;
         }
     }
 

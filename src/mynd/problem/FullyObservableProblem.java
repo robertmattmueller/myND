@@ -4,7 +4,6 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collections;
 import java.util.HashMap;
-import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
@@ -13,17 +12,14 @@ import java.util.SortedSet;
 import java.util.TreeSet;
 
 import mynd.Global;
-import mynd.MyNDPlanner;
 import mynd.Preprocessor;
 import mynd.MyNDPlanner.Algorithm;
 import mynd.explicit.ExplicitAxiomEvaluator;
 import mynd.explicit.ExplicitCondition;
-import mynd.explicit.ExplicitEffect;
 import mynd.explicit.ExplicitOperator;
 import mynd.explicit.ExplicitState;
 import mynd.explicit.ExplicitOperator.OperatorRule;
 import mynd.heuristic.pdb.Abstraction;
-import mynd.heuristic.pdb.PatternCollectionSearch;
 import mynd.state.Condition;
 import mynd.state.Operator;
 import mynd.state.State;
@@ -62,10 +58,6 @@ public class FullyObservableProblem extends Problem {
         super(goal, variableNames, propositionNames, domainSizes, axiomLayer, defaultAxiomValues, causativeOperators, axioms, true);
         Global.problem = this;
         performSanityCheck();
-        List<Integer> defaultValues = new ArrayList<Integer>();
-        for (int i = 0; i < initialValuation.length; i++) {
-            defaultValues.add(i, initialValuation[i]);
-        }
         explicitAxiomEvaluator = new ExplicitAxiomEvaluator();
         initialState = new ExplicitState(initialValuation, explicitAxiomEvaluator);
     }
@@ -96,7 +88,7 @@ public class FullyObservableProblem extends Problem {
         for (int var = 0; var < domainSizes.size(); var++) {
             if (domainSizes.get(var) < 1) {
                 System.err.println("Variable " + var + " has a domain size of " + domainSizes.get(var) + ".");
-                System.exit(1);
+                Global.ExitCode.EXIT_INPUT_ERROR.exit();
             }
         }
     }
@@ -111,7 +103,7 @@ public class FullyObservableProblem extends Problem {
                 System.out.println("Domain size length = " + domainSizes.size());
             }
             System.err.println("Numbers of state variables in inputs differ.");
-            System.exit(1);
+            Global.ExitCode.EXIT_INPUT_ERROR.exit();
         }
 
     }
@@ -144,11 +136,11 @@ public class FullyObservableProblem extends Problem {
      * @param pattern the set of state variables to which this problem is abstracted
      * @return        abstraction induced by given pattern
      */
-    public Abstraction abstractToPattern(Set<Integer> pattern) {
+    public Abstraction abstractToPattern(Set<Integer> pattern, Condition goal) {
         assert (initialState != null);
-
+    
         // Abstract goal condition.
-        Condition abstractGoal = explicitGoal.abstractToPattern(pattern);
+        Condition abstractGoal = ((ExplicitCondition) goal).abstractToPattern(pattern);
 
         // Abstract operators.
         Set<Operator> abstractedOperators = new LinkedHashSet<Operator>(getOperators().size());
@@ -223,18 +215,14 @@ public class FullyObservableProblem extends Problem {
         // Store operators as original operators before their preprocessing.
         setOriginalOperators(operators);
         LinkedHashSet<Operator> ops;
-        if (Global.algorithm == Algorithm.LAO_STAR) {
+        if (Global.algorithm == Algorithm.LAOSTAR) {
             ops = Preprocessor.preprocessForStrongCyclicPlanning(getOperators());
         }
         else {
-            assert (Global.algorithm == Algorithm.AO_STAR);
+            assert (Global.algorithm == Algorithm.AOSTAR);
             ops = Preprocessor.preprocessForStrongPlanning(getOperators());
         }
         operators = ops;
-        PatternCollectionSearch.fullObservablePatternSearch = false; // TODO: Could be mistakable. This
-        // variable is only relevant for POND planning and should be false in FOND planning, although
-        // in FOND planning the pattern collection search is always in a full observable search space.
-        MyNDPlanner.assumeFullObservability = false; // TODO same here...
     }
 
     /**
@@ -245,50 +233,6 @@ public class FullyObservableProblem extends Problem {
     @Override
     public Condition getGoal() {
         return explicitGoal;
-    }
-
-    /**
-     * Computes the determinization of given set of operators. After determinization each operator contains only
-     * deterministic effects.
-     * 
-     * @param ops set of explicit operators
-     * @return determinization of given set of operators
-     */
-    @Override
-    public Set<Operator> determinization(Set<Operator> ops) {
-        if (DEBUG) 
-            System.out.println("Determinize following operators: " + ops);
-        Set<Operator> result = new HashSet<Operator>(ops.size() * 2);
-        // Processing of explicit Operators.
-        for (Operator op : ops) {
-            ExplicitOperator explicitOp = (ExplicitOperator) op;
-            assert !op.isDeterminized();
-            Set<Set<ExplicitEffect>> nondeterministicEffect = explicitOp.getNondeterministicEffect();
-            if (nondeterministicEffect == null || nondeterministicEffect.size() == 1) {
-                // Operator is already deterministic, since it has only an empty effect or only a single deterministic effect.
-                result.add(new ExplicitOperator(op.getName() + "_det", explicitOp.precondition, explicitOp.getNondeterministicEffect(), op.observation, op.isAbstracted, true, op.getCost()));
-            }
-            else {
-                // There is more than one deterministic effect.
-                int i = 0;
-                if (DEBUG)
-                    System.out.println("Operator " + op + " has " + nondeterministicEffect.size() + " choices.");
-                for (Set<ExplicitEffect> choice : nondeterministicEffect) {
-                    if (choice.isEmpty()) 
-                        continue;
-                    Set<Set<ExplicitEffect>> modifiedNondeterministicEffect = new HashSet<Set<ExplicitEffect>>();
-                    modifiedNondeterministicEffect.add(choice);
-                    String name = op.getName() + "_det_" + i++;
-                    result.add(new ExplicitOperator(name , explicitOp.precondition, modifiedNondeterministicEffect, op.observation, op.isAbstracted, true, op.getCost()));
-                }
-            }
-        }
-        if (DEBUG) {
-            System.out.println("Result of determinization: " + result);
-            System.out.println();
-        }
-        assert (Operator.assertNoDuplicateInNames(result));
-        return result;
     }
 
     @Override
@@ -306,7 +250,7 @@ public class FullyObservableProblem extends Problem {
         // FIXME duplicate code (since of op.copy()).
         // See FullyObservable Problem. Constructor not possible since symbolic operators
         // are build with BDDManager.
-        Map<String, Operator> original = new HashMap<String, Operator>((int) (operators.size() * 0.75) + 1);
+        Map<String, Operator> original = new HashMap<String, Operator>((int) (operators.size() / 0.75) + 1);
         int index = 0; // Each operator should get a unique name. Append a index if it has a duplicate name.
         for (Operator op : operators) {
             if (original.containsKey(op.getName())) {

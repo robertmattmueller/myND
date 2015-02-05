@@ -350,8 +350,8 @@ public class LAOStarSearch extends AOStarSearch {
      *         occurred before proof.
      */
     @Override
-    public int run() {
-    	// Start measuring search time.
+    public Result run() {
+        // Start measuring search time.
         starttime = System.currentTimeMillis();
         
         // Get initial state and insert it with depth 0.
@@ -375,20 +375,13 @@ public class LAOStarSearch extends AOStarSearch {
         endtime = System.currentTimeMillis();
 
         if (initialNode.isProven) {
-            System.err.println("INITIAL IS PROVEN!");         
-        	//printStats();
-            System.err.println("\nResult: Strong cyclic plan found.");
-            return AbstractSearch.PROTAGONIST_WINS;
+            return Result.PROVEN;
         }
         else if (initialNode.isDisproven) {
-            System.err.println("INITIAL IS DISPROVEN!");
-            System.err.println("\nResult: No strong cyclic plan found.");
-            return AbstractSearch.ANTAGONIST_WINS;
+            return Result.DISPROVEN;
         }
         else {
-            System.err.println("INITIAL IS UNPROVEN!");
-            System.err.println("\nResult: No strong cyclic plan found due to time-out.");
-            return AbstractSearch.TIMEOUT;
+            return Result.TIMEOUT;
         } 
     }
 

@@ -14,11 +14,58 @@ import mynd.symbolic.BDDManager;
  * @author Manuela Ortlieb
  */
 public class Global {
-
+    
+    public enum ExitCode {
+        EXIT_PROVEN { // task solved, plan found
+            @Override
+            public void exit() {
+                System.exit(0);
+            }
+        },         
+        EXIT_CRITICAL_ERROR {
+            @Override
+            public void exit() {
+                System.exit(1);
+            }
+        },
+        EXIT_INPUT_ERROR {
+            @Override
+            public void exit() {
+                System.exit(2);
+            }
+        },
+        EXIT_UNSUPPORTED {
+            @Override
+            public void exit() {
+                System.exit(3);
+            }
+        },
+        EXIT_DISPROVEN { // task provably unsolvable
+            @Override
+            public void exit() {
+                System.exit(4);
+            }
+        },       
+        EXIT_UNPROVEN { // timeout, task not solved
+            @Override
+            public void exit() {
+                System.exit(5);
+            }
+        },        
+        EXIT_OUT_OF_MEMORY {
+            @Override
+            public void exit() {
+                System.exit(6);
+            }
+        };
+        
+        public abstract void exit();
+    };
+   
     /**
      * Search algorithm used.
      */
-    public static MyNDPlanner.Algorithm algorithm = Algorithm.LAO_STAR; // LAO* is the default algorithm.
+    public static MyNDPlanner.Algorithm algorithm = Algorithm.LAOSTAR; // LAO* is the default algorithm.
     
     /**
      * BDD Manager to handle BDDs.
@@ -34,4 +81,5 @@ public class Global {
      * To use everywhere in the code, where a random number is needed.
      */
     public static Random generator = new Random(1);
+
 }

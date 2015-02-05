@@ -73,21 +73,31 @@ public class FFHeuristic extends Heuristic {
      */
     public static boolean DEBUG = false;
 
+    public FFHeuristic(RPGStrategy strategy) {
+        this(strategy, Global.problem.explicitGoal);
+    }
+
     /**
      * Create a new FF heuristic evaluator for a given problem.
      * 
      * @param problem
      *            The problem for which to compute heuristic estimates
      */
-    public FFHeuristic(RPGStrategy strategy) {
+    public FFHeuristic(RPGStrategy strategy, ExplicitCondition goal) {
     	super(true); // FF heuristic supports axioms.
     	this.strategy = strategy;
     	reachableQueue = new PriorityQueue<FFProposition>();
         buildPropositions();
         goalProp = buildGoalPropositions();
         buildRules();
-        buildGoalRules(Global.problem.explicitGoal);
+        buildGoalRules(goal);
         rules = Collections.unmodifiableList(rules);
+        if (DEBUG) {
+            System.out.println("Initialized rules...");
+            for (FFRule r : rules) {
+                r.dump();
+            }
+        }
     }
 
     /**
@@ -200,22 +210,24 @@ public class FFHeuristic extends Heuristic {
      */
     private void buildRules() {
         rules = new LinkedList<FFRule>();
+        
         // Add rules for causative operators.
         for (Operator op : Global.problem.getOperators()) {
             if (op.isCausative) {
                 buildRulesForOperator(op.getExplicitOperator());
             }
         }
-        // Add rules for the axioms. 
-        // TODO [issue #50]: Dummy operator is a hack. Fix it.
-        if (strategy == RPGStrategy.FF) {
-            for (OperatorRule axiom : Global.problem.axioms) {
-                addRule(axiom.head, axiom.body, axiom.getDummyOperator());
-            }
+        
+        // Add rules for axioms. 
+        for (OperatorRule axiom : Global.problem.axioms) {
+            // Only the costs of this "dummy" operator are used. // TODO fix this?
+            ExplicitOperator dummy = new ExplicitOperator("axiom", null, null, Collections.<Pair<Integer, Integer>> emptySet(), false, 0);
+            addRule(axiom.head, axiom.body, dummy);
         }
+
         simplify();
         // Sort rules by costs.
-        Collections.sort(rules);
+        Collections.sort(rules); // TODO Is this necessary?
     }
 
     /**
@@ -308,7 +320,7 @@ public class FFHeuristic extends Heuristic {
         assert goalProposition != null;
         if (goalProposition == null) {
             System.err.println("Error in FFHeuristic.extractFFValue: none of the goal monomials has been reached yet.");
-            System.exit(-1);
+            Global.ExitCode.EXIT_CRITICAL_ERROR.exit();
         }
 
         collectRequiredRules(goalProposition, requiredRules);
@@ -438,6 +450,12 @@ public class FFHeuristic extends Heuristic {
 
             assert (!reachableQueue.contains(currentProp));
             reachableQueue.add(currentProp);
+            if (Global.problem.axiomLayer.get(var) != -1) {
+                // Add default value of this derived variable.
+                currentProp = getProposition(var, Global.problem.defaultAxiomValues.get(var));
+                currentProp.reachCost = 0;
+                reachableQueue.add(currentProp);
+            }
         }
         assert goalProp != null;
         goalProp.reachedBy = null; // reset goal proposition

@@ -8,34 +8,22 @@ import mynd.Global;
  * @author Robert Mattmueller
  */
 public abstract class AbstractSearch {
-
-    /**
-     * Value indicating that the problem has been neither solved nor proven
-     * unsolvable yet.
-     */
-    public static final int UNDECIDED = -1;
-
-    /**
-     * Return value indicating existence of a winning strategy for the
-     * protagonist
-     */
-    public static final int PROTAGONIST_WINS = 0;
-
-    /**
-     * Return value indicating non-existence of a winning strategy for the
-     * protagonist
-     */
-    public static final int ANTAGONIST_WINS = 1;
-
-    /**
-     * Return value indicating time-out
-     */
-    public static final int TIMEOUT = 2;
+    
+    public enum Result {       
+        // existence of a winning strategy for the protagonist
+        PROVEN,
+        
+        //non-existence of a winning strategy for the protagonist
+        DISPROVEN,
+        
+        // indicating time-out
+        TIMEOUT
+    };
 
     /**
      * Indicates that no time-out is used.
      */
-    private static final long NO_TIMEOUT = Long.MAX_VALUE;
+    public static final long NO_TIMEOUT = Long.MAX_VALUE;
 
     /**
      * System time when search started.
@@ -101,7 +89,7 @@ public abstract class AbstractSearch {
      *         provably wins, and <tt>AbstractSearch.TIMEOUT</tt> if time-out
      *         occurred before proof.
      */
-    public abstract int run();
+    public abstract Result run();
 
     /**
      * Set the time-out for the search.

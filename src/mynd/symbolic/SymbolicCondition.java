@@ -57,7 +57,7 @@ public class SymbolicCondition implements Condition {
      * @param condition BDD which describes a condition.
      * @param scope scope of this condition
      */
-    private SymbolicCondition(BDD conditionBDD, Set<Integer> scope) {
+    SymbolicCondition(BDD conditionBDD, Set<Integer> scope) {
 		this.conditionBDD = conditionBDD;
 		this.scope = Collections.unmodifiableSortedSet(new TreeSet<Integer>(scope));
 		assert ExplicitState.assertVariableOrder(this.scope);

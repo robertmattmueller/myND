@@ -14,9 +14,9 @@ import mynd.state.Operator;
  * @author Manuela Ortlieb
  */
 public class CompatibilityGraph {
-	
-	private HashSet<Integer> vertices;
-	private HashMap<Integer, HashSet<Integer>> neighbors; // index of pattern to set of indices of adjacent patterns
+
+    private HashSet<Integer> vertices;
+    private HashMap<Integer, HashSet<Integer>> neighbors; // index of pattern to set of indices of adjacent patterns
     private ArrayList<Set<Integer>> patternCollection;
     private boolean[][] additiveVariablePairs;
     private HashSet<HashSet<Integer>> maxCliques;
@@ -28,16 +28,16 @@ public class CompatibilityGraph {
      * @param patternCollection
      */
     public CompatibilityGraph(Set<Set<Integer>> patternCollection) {
-    	int numberOfPatterns = patternCollection.size();
-    	int capacity = (int) (numberOfPatterns * 0.75) + 1;
-    	vertices = new HashSet<Integer>(capacity); // One vertex for each pattern.
+        int numberOfPatterns = patternCollection.size();
+        int capacity = (int) (numberOfPatterns / 0.75) + 1;
+        vertices = new HashSet<Integer>(capacity); // One vertex for each pattern.
         neighbors = new HashMap<Integer, HashSet<Integer>>(capacity);
         this.patternCollection = new ArrayList<Set<Integer>>(patternCollection); // We need an index for each pattern. 
         maxCliques = new HashSet<HashSet<Integer>>(30); 
         computeAdditiveVars();
         buildCGraph();
     }
-    
+
     /**
      * Extend the graph permanently by a new pattern. Maximal cliques have to be recomputed after extension.
      * 
@@ -52,50 +52,50 @@ public class CompatibilityGraph {
         assert (notContained);
         neighbors.put(newVertex, new HashSet<Integer>());
         for (int i = 0; i < vertices.size() - 1; i++) {
-        	if (arePatternsAdditive(patternCollection.get(i), patternCollection.get(newVertex))) {
-        		neighbors.get(i).add(newVertex);
-        		neighbors.get(newVertex).add(i);
-        	}
+            if (arePatternsAdditive(patternCollection.get(i), patternCollection.get(newVertex))) {
+                neighbors.get(i).add(newVertex);
+                neighbors.get(newVertex).add(i);
+            }
         }
         computeMaximalCliques();
     }
-    
+
     /** 
      * Precomputation of additive variables.
      */
     public void computeAdditiveVars() {
-    	assert additiveVariablePairs == null;
-    	additiveVariablePairs = new boolean[Global.problem.numStateVars][Global.problem.numStateVars];
-    	for (boolean[] row : additiveVariablePairs) {
-    		Arrays.fill(row, true);
-    	}
-    	for (Operator op : Global.problem.getOperators()) { // TODO: check this! Only causative actions??
-    		Integer[] effectVars = op.getAffectedVariables().toArray(new Integer[op.getAffectedVariables().size()]);
-    		for (int j = 0; j < effectVars.length; j++) {
-    			for (int k = 0; k < effectVars.length; k++) { 
-    				additiveVariablePairs[effectVars[j]][effectVars[k]] = false;
-    			}
-    		}
-    	}
+        assert additiveVariablePairs == null;
+        additiveVariablePairs = new boolean[Global.problem.numStateVars][Global.problem.numStateVars];
+        for (boolean[] row : additiveVariablePairs) {
+            Arrays.fill(row, true);
+        }
+        for (Operator op : Global.problem.getOperators()) { // TODO: check this! Only causative actions??
+            Integer[] effectVars = op.getAffectedVariables().toArray(new Integer[op.getAffectedVariables().size()]);
+            for (int j = 0; j < effectVars.length; j++) {
+                for (int k = 0; k < effectVars.length; k++) { 
+                    additiveVariablePairs[effectVars[j]][effectVars[k]] = false;
+                }
+            }
+        }
     }
 
     public Set<Set<Set<Integer>>> getMaxAdditiveSubsets(Set<Integer> newPattern) {
-    	// newPattern is not part of the compatibility graph
-    	assert (!patternCollection.contains(newPattern));
+        // newPattern is not part of the compatibility graph
+        assert (!patternCollection.contains(newPattern));
         Set<Set<Set<Integer>>> maxAdditiveSubsets = new HashSet<Set<Set<Integer>>>();
         assert (!maxCliques.isEmpty());
         for (HashSet<Integer> clique : maxCliques) {
-        	HashSet<Set<Integer>> subset = new HashSet<Set<Integer>>();
-        	// take all patterns which are additive to the new pattern
-        	for (Integer index : clique) {
-        		if (arePatternsAdditive(patternCollection.get(index), newPattern))
-        			subset.add(patternCollection.get(index));
-        	}
-        	if (!subset.isEmpty())
-        		maxAdditiveSubsets.add(subset);
+            HashSet<Set<Integer>> subset = new HashSet<Set<Integer>>();
+            // take all patterns which are additive to the new pattern
+            for (Integer index : clique) {
+                if (arePatternsAdditive(patternCollection.get(index), newPattern))
+                    subset.add(patternCollection.get(index));
+            }
+            if (!subset.isEmpty())
+                maxAdditiveSubsets.add(subset);
         }
         if (maxAdditiveSubsets.isEmpty())
-        	maxAdditiveSubsets.add(new HashSet<Set<Integer>>()); // empty set 
+            maxAdditiveSubsets.add(new HashSet<Set<Integer>>()); // empty set 
         return maxAdditiveSubsets;
     }
 
@@ -105,33 +105,33 @@ public class CompatibilityGraph {
     private void buildCGraph() {
         // add all patterns as vertices to the compatibility graph
         for (int i = 0; i < patternCollection.size(); i++) {
-        	vertices.add(i);
+            vertices.add(i);
             neighbors.put(i, new HashSet<Integer>());
         }
         // add edges between additive vertices (patterns)
         for (int i = 0; i < patternCollection.size(); i++) {
-        	for (int j = i + 1; j < patternCollection.size(); j++) {
-        		if (arePatternsAdditive(patternCollection.get(i), patternCollection.get(j))) {
-        			neighbors.get(i).add(j);
-        			neighbors.get(j).add(i);
-        		}
-        	}
+            for (int j = i + 1; j < patternCollection.size(); j++) {
+                if (arePatternsAdditive(patternCollection.get(i), patternCollection.get(j))) {
+                    neighbors.get(i).add(j);
+                    neighbors.get(j).add(i);
+                }
+            }
         }
         computeMaximalCliques();
     }
-    
+
     /** 
      * Computes if two patterns are additive.
      */
     // TODO check if it makes sense to cache results
     public boolean arePatternsAdditive(Set<Integer> patternA, Set<Integer> patternB) {
-    	for (Integer varA : patternA) {
-    		for (Integer varB : patternB) {
-    			if (!additiveVariablePairs[varA][varB])
-    				return false;
-    		}
-    	}
-    	return true;
+        for (Integer varA : patternA) {
+            for (Integer varB : patternB) {
+                if (!additiveVariablePairs[varA][varB])
+                    return false;
+            }
+        }
+        return true;
     }
 
     /**
@@ -149,11 +149,9 @@ public class CompatibilityGraph {
      * Implementation of the "Maximal Cliques" algorithm of Etsuji Tomita, Akira
      * Tanaka and Haruhisa Takahashi
      */
-    //@SuppressWarnings("unchecked")
-	private void expand(HashSet<Integer> subg, HashSet<Integer> cand) {
+    private void expand(HashSet<Integer> subg, HashSet<Integer> cand) {
         if (subg.isEmpty()) {
-            //maxCliques.add((HashSet<Integer>) Q.clone());
-        	maxCliques.add(new HashSet<Integer>(Q));
+            maxCliques.add(new HashSet<Integer>(Q));
         }
         else {
             int u = vertexWithMaxSucc(subg, cand);
@@ -179,9 +177,9 @@ public class CompatibilityGraph {
 
     public Set<Set<Set<Integer>>> getMaximalCliques() {
         assert (!maxCliques.isEmpty());
-        Set<Set<Set<Integer>>> cliques = new HashSet<Set<Set<Integer>>>((int) (maxCliques.size() * 0.75) + 1);
+        Set<Set<Set<Integer>>> cliques = new HashSet<Set<Set<Integer>>>((int) (maxCliques.size() / 0.75) + 1);
         for (HashSet<Integer> clique : maxCliques) {
-            Set<Set<Integer>> patterns = new HashSet<Set<Integer>>((int) (clique.size() * 0.75) + 1);
+            Set<Set<Integer>> patterns = new HashSet<Set<Integer>>((int) (clique.size() / 0.75) + 1);
             for (Integer index : clique) {
                 patterns.add(patternCollection.get(index));
             }

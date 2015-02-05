@@ -57,7 +57,7 @@ public class SymbolicAxiomEvaluator {
 	}
 	
 	private void initialize(Set<OperatorRule> setOfAxioms) {
-		Map<Pair<Integer, Integer>, Set<Set<Pair<Integer, Integer>>>> derivedVarsToAxioms = new HashMap<Pair<Integer,Integer>, Set<Set<Pair<Integer,Integer>>>>((int) (Global.problem.numAxioms * 0.75) + 1);
+		Map<Pair<Integer, Integer>, Set<Set<Pair<Integer, Integer>>>> derivedVarsToAxioms = new HashMap<Pair<Integer,Integer>, Set<Set<Pair<Integer,Integer>>>>((int) (Global.problem.numAxioms / 0.75) + 1);
 		for (OperatorRule axiom : setOfAxioms) {
 			if (derivedVarsToAxioms.containsKey(axiom.head)) {
 				derivedVarsToAxioms.get(axiom.head).add(axiom.body);

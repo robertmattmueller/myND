@@ -25,7 +25,7 @@ public class Preprocessor {
     public static LinkedHashSet<Operator> preprocessForStrongCyclicPlanning(Set<Operator> ops) {
     	// TODO: Prefer ops with less uncertainty, if an modified op is equal to another op from ops.
     	// TODO: Issue #45: Is this preprocessing useful because it leads to biased costs in LAO*-search?
-        LinkedHashSet<Operator> remainingOps = new LinkedHashSet<Operator>((int) (ops.size() * 0.75) + 1);
+        LinkedHashSet<Operator> remainingOps = new LinkedHashSet<Operator>((int) (ops.size() / 0.75) + 1);
         for (Operator op : ops) {
         	ExplicitOperator explicitOp = (ExplicitOperator) op;
             Set<Set<ExplicitEffect>> newChoices = new HashSet<Set<ExplicitEffect>>(explicitOp.getNondeterministicEffect());
@@ -54,7 +54,7 @@ public class Preprocessor {
      * @return preprocessed operators
      */
     public static LinkedHashSet<Operator> preprocessForStrongPlanning(Set<Operator> ops) {
-    	LinkedHashSet<Operator> remainingOps = new LinkedHashSet<Operator>((int) (ops.size() * 0.75) + 1);
+    	LinkedHashSet<Operator> remainingOps = new LinkedHashSet<Operator>((int) (ops.size() / 0.75) + 1);
         for (Operator op : ops) {
         	ExplicitOperator explicitOp = (ExplicitOperator) op;
             boolean removeOperator = false;

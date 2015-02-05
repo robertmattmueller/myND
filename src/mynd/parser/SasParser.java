@@ -42,7 +42,7 @@ import net.sf.javabdd.BDD;
  * @author Manuela Ortlieb
  */
 public class SasParser {
-	
+
     /**
      * Keyword for begin of version section.
      */
@@ -52,7 +52,7 @@ public class SasParser {
      * Keyword for end of version section.
      */
     private static final String RW_ENDVERSION = "end_version";
-    
+
     /**
      * Keyword for begin of metric section.
      */
@@ -102,7 +102,7 @@ public class SasParser {
      * Keyword for end of operator description.
      */
     private static final String RW_ENDOP = "end_operator";
-    
+
     /**
      * Keyword for begin of a mutex group.
      */
@@ -112,12 +112,12 @@ public class SasParser {
      * Keyword for end of operator description.
      */
     private static final String RW_ENDMUTEXGROUP = "end_mutex_group";
-    
+
     /**
      * Keyword for begin of an axiom description.
      */
     private static final String RW_BEGINAXIOM = "begin_rule";
-    
+
     /**
      * Keyword for end of an axiom description.
      */
@@ -147,7 +147,7 @@ public class SasParser {
      * Variable domain sizes.
      */
     private ArrayList<Integer> domainSizes;
-    
+
     /**
      * Variable axiom layers.
      */
@@ -157,44 +157,44 @@ public class SasParser {
      * Set of the planning task's operators.
      */
     private LinkedHashSet<Operator> operators;
-    
+
     /**
      * Axioms.
      */
     private Set<OperatorRule> axioms;
-    
+
     /**
      * List of proposition names corresponding to variable-value pairs.
      * propositionNames[i][j] is the name of the proposition corresponding to
      * the equality (var_i = j).
      */
     private ArrayList<List<String>> propositionNames;
-    
+
     /**
      * Denotes if problem to be parsed is full observable or not.
      */
     private boolean fullObservable;
-    
+
     /**
      * Valuation of initial state (fully observable problem).
      */
     private int[] initialValuation;
-    
+
     /**
      * Initial belief state as BDD (partially observable problem).
      */
     private BDD initialBDD;
-    
+
     /**
      * Default values of derived variables.
      */
     private ArrayList<Integer> defaultValues;
-    
+
     /**
      * Variables which are not unknown in the initial state.
      */
     private Set<Integer> variablesWhichAreInitiallyKnown; 
-    
+
     /**
      * Indicates if action costs are used or not. 
      */
@@ -214,7 +214,7 @@ public class SasParser {
             return;
         }
         System.err.println("Parse error: Expected \"" + expected + "\" but read \"" + actual + "\".");
-        System.exit(1);
+        Global.ExitCode.EXIT_INPUT_ERROR.exit();
     }
 
     /**
@@ -235,7 +235,7 @@ public class SasParser {
             System.err.print(token + " ");
         }
         System.err.println("\".");
-        System.exit(1);
+        Global.ExitCode.EXIT_INPUT_ERROR.exit();
     }
 
     /**
@@ -256,7 +256,7 @@ public class SasParser {
             System.err.print(token + " ");
         }
         System.err.println("\".");
-        System.exit(1);
+        Global.ExitCode.EXIT_INPUT_ERROR.exit();
     }
 
     /**
@@ -281,13 +281,13 @@ public class SasParser {
         initialize(stream);
         parseInput();
         if (fullObservable) { 
-        	FullyObservableProblem.getInstance(initialValuation, goal, variableNames, propositionNames, domainSizes, axiomLayer, defaultValues, operators, axioms);
+            FullyObservableProblem.getInstance(initialValuation, goal, variableNames, propositionNames, domainSizes, axiomLayer, defaultValues, operators, axioms);
         }
         else {
-        	PartiallyObservableProblem.getInstance(initialBDD, goal, variableNames, propositionNames, domainSizes, axiomLayer, defaultValues, operators, axioms, variablesWhichAreInitiallyKnown);
+            PartiallyObservableProblem.getInstance(initialBDD, goal, variableNames, propositionNames, domainSizes, axiomLayer, defaultValues, operators, axioms, variablesWhichAreInitiallyKnown);
         }
     }
-        
+
 
     /**
      * Parse goal condition.
@@ -307,7 +307,7 @@ public class SasParser {
         assertEq(reader.readLine(), RW_BEGINGOAL);
 
         int goalSize = parseInt("Parse goal condition error", reader.readLine());
-        Map<Integer, Integer> variableValuePairs = new HashMap<Integer, Integer>((int) (goalSize * 0.75) + 1);
+        Map<Integer, Integer> variableValuePairs = new HashMap<Integer, Integer>((int) (goalSize / 0.75) + 1);
 
         for (int i = 0; i < goalSize; i++) {
             String[] line = splitNextLine();
@@ -337,16 +337,16 @@ public class SasParser {
      * @throws IOException
      */
     private void parseInitialState() throws IOException {
-    	variablesWhichAreInitiallyKnown = new HashSet<Integer>(((int) (numberOfVariables / 0.75)) + 1);
+        variablesWhichAreInitiallyKnown = new HashSet<Integer>(((int) (numberOfVariables / 0.75)) + 1);
         assertEq(reader.readLine(), RW_BEGINSTATE);
         Integer[] defaultVals = new Integer[numberOfVariables];
         // Fill up with -1.
         for (int i = 0; i < numberOfVariables; i++) {
-        	defaultVals[i] = -1;
+            defaultVals[i] = -1;
         }
-        
+
         if (!fullObservable) {
-        	String[] line = splitNextLine();
+            String[] line = splitNextLine();
             int numberOfFacts = parseInt("Parse initial state error (number of facts)", line[0], 0, numberOfVariables);
             int[] factVars = new int[numberOfFacts];
             int[] factVals = new int[numberOfFacts];
@@ -356,8 +356,8 @@ public class SasParser {
                 factVars[i] = parseInt("Parse initial state error", line[0], 0, numberOfVariables);
                 factVals[i] = parseInt("Parse initial state error", line[1], 0, domainSizes.get(factVars[i]) -1);
                 if (axiomLayer.get(factVars[i]) > -1) {
-                	// Derived variable.
-                	defaultVals[factVars[i]] = factVals[i];
+                    // Derived variable.
+                    defaultVals[factVars[i]] = factVals[i];
                 }
                 variablesWhichAreInitiallyKnown.add(factVars[i]);
             }
@@ -366,46 +366,46 @@ public class SasParser {
             int[][] oneOfVars = new int[numberOfOneOf][];
             int[][] oneOfVals = new int[numberOfOneOf][];
             for (int i = 0; i < numberOfOneOf; i++) {
-            	line = splitNextLine();
-            	assert line.length%2 == 0;
-            	oneOfVars[i] = new int[line.length/2];
-            	oneOfVals[i] = new int[line.length/2];
-            	// collect vars
-            	for (int j = 0; j < line.length; j+=2)
-            		oneOfVars[i][j/2] = parseInt("Parse initial state error", line[j], 0, numberOfVariables);
-            	// collect vals
-            	for (int j = 1; j < line.length; j+=2)
-            		oneOfVals[i][(j-1)/2] = parseInt("Parse initial state error", line[j], 0, domainSizes.get(oneOfVars[i][(j-1)/2]));
+                line = splitNextLine();
+                assert line.length%2 == 0;
+                oneOfVars[i] = new int[line.length/2];
+                oneOfVals[i] = new int[line.length/2];
+                // collect vars
+                for (int j = 0; j < line.length; j+=2)
+                    oneOfVars[i][j/2] = parseInt("Parse initial state error", line[j], 0, numberOfVariables);
+                // collect vals
+                for (int j = 1; j < line.length; j+=2)
+                    oneOfVals[i][(j-1)/2] = parseInt("Parse initial state error", line[j], 0, domainSizes.get(oneOfVars[i][(j-1)/2]));
             }
             line = splitNextLine();
             int numberOfFormulae = parseInt("Parse Initial state error", line[0], 0);
             String[] formulae = new String[numberOfFormulae];
             for (int i = 0; i < numberOfFormulae; i++) {
-            	formulae[i] = reader.readLine();
+                formulae[i] = reader.readLine();
             }
             assertEq(reader.readLine(), RW_ENDSTATE);
             initialBDD = Global.BDDManager.initializeInitialStateBDD(factVars, factVals, oneOfVars, oneOfVals, formulae);
             // Assert that every derived variable has a default value.
             for (int var = 0; var < numberOfVariables; var++) {
-            	if (axiomLayer.get(var) > -1) {
-            		assert defaultVals[var] > -1;
-            	}
+                if (axiomLayer.get(var) > -1) {
+                    assert defaultVals[var] > -1;
+                }
             }
         }
         else {
-        	int[] factVals = new int[numberOfVariables];
-        	for (int var = 0; var < numberOfVariables; var++) {
+            int[] factVals = new int[numberOfVariables];
+            for (int var = 0; var < numberOfVariables; var++) {
                 String[] line = splitNextLine();
                 assertLen(line,1);
                 factVals[var] = parseInt("Parse initial state error", line[0], 0, domainSizes.get(var) - 1);
                 if (axiomLayer.get(var) > -1) {
-                	// Derived variable.
-                	defaultVals[var] = factVals[var];
+                    // Derived variable.
+                    defaultVals[var] = factVals[var];
                 }
                 variablesWhichAreInitiallyKnown.add(var);
-        	}
-        	assertEq(reader.readLine(), RW_ENDSTATE);
-        	initialValuation = factVals;
+            }
+            assertEq(reader.readLine(), RW_ENDSTATE);
+            initialValuation = factVals;
         }
         defaultValues = new ArrayList<Integer>(Arrays.asList(defaultVals));
     }
@@ -458,7 +458,7 @@ public class SasParser {
         }
         catch (NumberFormatException e) {
             System.err.println(errorMessage + ": Expected an integer but read \"" + string + "\".");
-            System.exit(1);
+            Global.ExitCode.EXIT_INPUT_ERROR.exit();
         }
         return result;
     }
@@ -478,7 +478,7 @@ public class SasParser {
         if (result < minValue) {
             System.err.println(errorMessage + ": Expected an integer greater than or equal to " + minValue + " but read "
                     + result + ".");
-            System.exit(1);
+            Global.ExitCode.EXIT_INPUT_ERROR.exit();
         }
         return result;
     }
@@ -500,7 +500,7 @@ public class SasParser {
         if (result > maxValue) {
             System.err.println(errorMessage + ": Expected an integer less than or equal to " + maxValue + " but read "
                     + result + ".");
-            System.exit(1);
+            Global.ExitCode.EXIT_INPUT_ERROR.exit();
         }
         return result;
     }
@@ -519,19 +519,19 @@ public class SasParser {
      * @throws IOException
      */
     private void parseVersion() throws IOException {
-    	assertEq(reader.readLine(), RW_BEGINVERSION);
-    	String version = reader.readLine();
-    	// We support version 3 (deterministic) and version 3 with FOND/POND adaptions.
-    	assert version.equals("3.FOND") || version.equals("3.POND") || version.equals("3");
-    	if (version.equals("3.POND")) {
-    		fullObservable = false;
-    	}
-    	else {
-    		fullObservable = true;
-    	}
-    	assertEq(reader.readLine(), RW_ENDVERSION);
+        assertEq(reader.readLine(), RW_BEGINVERSION);
+        String version = reader.readLine();
+        // We support version 3 (deterministic) and version 3 with FOND/POND adaptions.
+        assert version.equals("3.FOND") || version.equals("3.POND") || version.equals("3");
+        if (version.equals("3.POND")) {
+            fullObservable = false;
+        }
+        else {
+            fullObservable = true;
+        }
+        assertEq(reader.readLine(), RW_ENDVERSION);
     }
-    
+
     /**
      * Parse metric which indicated whether action costs are used or not.
      * 
@@ -546,12 +546,12 @@ public class SasParser {
      * @throws IOException
      */
     private void parseMetric() throws IOException {
-    	assertEq(reader.readLine(), RW_BEGINMETRIC);
-    	int metric = parseInt("Parse metric error", reader.readLine(), 0, 1);
-    	if (metric == 1) {
-    		actionCostsUsed = true;
-    	}
-    	assertEq(reader.readLine(), RW_ENDMETRIC);
+        assertEq(reader.readLine(), RW_BEGINMETRIC);
+        int metric = parseInt("Parse metric error", reader.readLine(), 0, 1);
+        if (metric == 1) {
+            actionCostsUsed = true;
+        }
+        assertEq(reader.readLine(), RW_ENDMETRIC);
     }
 
     /**
@@ -593,96 +593,96 @@ public class SasParser {
         for (int i = 0; i < numPrevails; i++) {
             String[] line = splitNextLine();
             assertLen(line, 2);
-            
+
             prevailVarsList.add(i, parseInt("Parse operator error", line[0], 0, numberOfVariables - 1));
             prevailValsList.add(i, parseInt("Parse operator error", line[1], 0, domainSizes.get(prevailVarsList.get(i)) - 1));
         }
 
         int numNondetChoices = parseInt("Parse operator error (numNondetChoices)", reader.readLine(), 1);
 
-        Set<Set<ExplicitEffect>> nondeterministicChoices = new HashSet<Set<ExplicitEffect>>((int) (numNondetChoices * 0.75) + 1);
+        Set<Set<ExplicitEffect>> nondeterministicChoices = new HashSet<Set<ExplicitEffect>>((int) (numNondetChoices / 0.75) + 1);
 
         for (int ch = 0; ch < numNondetChoices; ch++) {
-        	int numEffects = parseInt("Parse operator error (numEffects)", reader.readLine(), 0);
+            int numEffects = parseInt("Parse operator error (numEffects)", reader.readLine(), 0);
 
-        	Set<ExplicitEffect> effects = new HashSet<ExplicitEffect>((int) (numEffects * 0.75) + 1);
+            Set<ExplicitEffect> effects = new HashSet<ExplicitEffect>((int) (numEffects / 0.75) + 1);
 
-        	for (int i = 0; i < numEffects; i++) {
-        		String[] line = splitNextLine();
-        		assertLenGeq(line, 1);
+            for (int i = 0; i < numEffects; i++) {
+                String[] line = splitNextLine();
+                assertLenGeq(line, 1);
 
-        		int numEffectConditions = parseInt("Parse operator error (numEffectConditions)", line[0], 0);
-        		assert (numEffectConditions == 0);
-        		assertLen(line, 2 * numEffectConditions + 4);
+                int numEffectConditions = parseInt("Parse operator error (numEffectConditions)", line[0], 0);
+                assert (numEffectConditions == 0);
+                assertLen(line, 2 * numEffectConditions + 4);
 
-        		Map<Integer, Integer> variableValuePairs = new HashMap<Integer, Integer>((int) (numEffectConditions * 0.75) + 1);
+                Map<Integer, Integer> variableValuePairs = new HashMap<Integer, Integer>((int) (numEffectConditions / 0.75) + 1);
 
-        		for (int j = 0; j < numEffectConditions; j++) {
-        			int var = parseInt("Parse operator error (effect condition var)", line[2 * j + 1], 0, numberOfVariables - 1);
-        			int val = parseInt("Parse operator error (effect condition val)", line[2 * j + 2], 0, domainSizes.get(var) - 1);
-        			variableValuePairs.put(var, val);
-        		}
+                for (int j = 0; j < numEffectConditions; j++) {
+                    int var = parseInt("Parse operator error (effect condition var)", line[2 * j + 1], 0, numberOfVariables - 1);
+                    int val = parseInt("Parse operator error (effect condition val)", line[2 * j + 2], 0, domainSizes.get(var) - 1);
+                    variableValuePairs.put(var, val);
+                }
 
-        		int var = parseInt("Parse operator error", line[2 * numEffectConditions + 1], 0, numberOfVariables - 1);
-        		int oldVal = parseInt("Parse operator error", line[2 * numEffectConditions + 2], -1, domainSizes.get(var) - 1);
-        		int newVal = parseInt("Parse operator error", line[2 * numEffectConditions + 3], 0, domainSizes.get(var) - 1);
+                int var = parseInt("Parse operator error", line[2 * numEffectConditions + 1], 0, numberOfVariables - 1);
+                int oldVal = parseInt("Parse operator error", line[2 * numEffectConditions + 2], -1, domainSizes.get(var) - 1);
+                int newVal = parseInt("Parse operator error", line[2 * numEffectConditions + 3], 0, domainSizes.get(var) - 1);
 
-        		if (oldVal != -1 && !prevailVarsList.contains(var)) {
-        			prevailVarsList.add(var);
-        			prevailValsList.add(oldVal);
-        		}
-        		
-        		effects.add(new ExplicitEffect(new ExplicitCondition(variableValuePairs), var, newVal));
-        	}
+                if (oldVal != -1 && !prevailVarsList.contains(var)) {
+                    prevailVarsList.add(var);
+                    prevailValsList.add(oldVal);
+                }
 
-        	nondeterministicChoices.add(effects);
+                effects.add(new ExplicitEffect(new ExplicitCondition(variableValuePairs), var, newVal));
+            }
+
+            nondeterministicChoices.add(effects);
         }
         assert !nondeterministicChoices.isEmpty();
         // Note: A nondeterministic effect which has only one deterministic effect, the empty effect, does not
         // change the current state. To be more efficient when working with BDDs, we represent this special effect
         // by null.
         if (nondeterministicChoices.size() == 1 && nondeterministicChoices.iterator().next().isEmpty()) {
-        	nondeterministicChoices = null;
+            nondeterministicChoices = null;
         }
-        
-        Map<Integer, Integer> prevailVariableValuePairs = new HashMap<Integer, Integer>((int) (prevailVarsList.size() * 0.75) + 1);
+
+        Map<Integer, Integer> prevailVariableValuePairs = new HashMap<Integer, Integer>((int) (prevailVarsList.size() / 0.75) + 1);
         for (int i = 0; i < prevailVarsList.size(); i++) {
             int var = prevailVarsList.get(i);
             int val = prevailValsList.get(i);
             prevailVariableValuePairs.put(var, val);
         }
-        
+
         int actionCost = parseInt("Parse action cost error", reader.readLine(), 0);
         if (!actionCostsUsed && actionCost != 0) {
-        	System.err.println("Warning: Action costs are not used because of the metric section of the SAS+ file.");
-        	System.err.println("But it seems that there are costs defined in the SAS+ file. Please check!");
+            System.err.println("WARNING: Action costs are not used because of the metric section of the SAS+ file.");
+            System.err.println("But it seems that there are costs defined in the SAS+ file. Please check!");
         }
         if (!actionCostsUsed) {
-        	actionCost = 1;
+            actionCost = 1;
         }
-        
+
         Set<Pair<Integer, Integer>> observation;
         if (!fullObservable) {
-        	int numberOfObservations = parseInt("Parse observation error", reader.readLine(), 0);
-        	observation = new HashSet<Pair<Integer, Integer>>((int) (numberOfObservations * 0.75) + 1);
-        	if (numberOfObservations > 0) {
-        		for (int i = 0; i < numberOfObservations; i++) {
-        			String[] line = splitNextLine();
-        			assert line.length == 2;
-        			int var = parseInt("Parse observation error", line[0], 0, numberOfVariables - 1);
-        			int val = parseInt("Parse observation error", line[1], 0, domainSizes.get(var) - 1);
-        			observation.add(new Pair<Integer, Integer>(var, val));
-        		}
-        	}
+            int numberOfObservations = parseInt("Parse observation error", reader.readLine(), 0);
+            observation = new HashSet<Pair<Integer, Integer>>((int) (numberOfObservations / 0.75) + 1);
+            if (numberOfObservations > 0) {
+                for (int i = 0; i < numberOfObservations; i++) {
+                    String[] line = splitNextLine();
+                    assert line.length == 2;
+                    int var = parseInt("Parse observation error", line[0], 0, numberOfVariables - 1);
+                    int val = parseInt("Parse observation error", line[1], 0, domainSizes.get(var) - 1);
+                    observation.add(new Pair<Integer, Integer>(var, val));
+                }
+            }
         }
         else {
-        	observation = Collections.emptySet();
+            observation = Collections.emptySet();
         }
-        
+
         assertEq(reader.readLine(), RW_ENDOP);
 
         if (nondeterministicChoices == null && observation.isEmpty()) {
-        	return null;
+            return null;
         }
         return new ExplicitOperator(name, new ExplicitCondition(prevailVariableValuePairs), nondeterministicChoices, observation, false, actionCost);
     }
@@ -701,41 +701,40 @@ public class SasParser {
      */
     private void parseOperators() throws IOException {
         int numOps = parseInt("Parse operator error", reader.readLine(), 0);
-        operators = new LinkedHashSet<Operator>((int) (numOps * 0.75) + 1);
+        operators = new LinkedHashSet<Operator>((int) (numOps / 0.75) + 1);
         for (int i = 0; i < numOps; i++) {
             ExplicitOperator op = parseOperator();
             if (op == null) {
-            	continue;
+                continue;
             }
             operators.add(op);
         }
     }
 
     private void parseAxioms() throws IOException {
-    	int numberOfAxioms = parseInt("Parse axioms error", reader.readLine(), 0);
-    	axioms = new LinkedHashSet<OperatorRule>((int) (numberOfAxioms * 0.75) + 1);
-    	ExplicitOperator dummy = new ExplicitOperator("axiom", null, null, Collections.<Pair<Integer, Integer>>emptySet(), false, 0);
-    	for (int i = 0; i < numberOfAxioms; i++) {
-    		assertEq(reader.readLine(), RW_BEGINAXIOM);
-    		// body
-    		int numConditions = parseInt("Error while parsing number of axiom conditions.", reader.readLine(), 0);
-    		Set<Pair<Integer, Integer>> conditions = new HashSet<Pair<Integer,Integer>>((int) (numConditions * 0.75) + 1);
-    		for (int j = 0; j < numConditions; j++) {
-    			String[] line = splitNextLine();
-    			assertLen(line, 2);
-    			int var = parseInt("Error while parsing variable of an axiom condition.", line[0], 0, numberOfVariables - 1);
-    			int val = parseInt("Error while parsing value of an axiom condition.", line[1], 0, domainSizes.get(var) - 1);
-    			conditions.add(new Pair<Integer, Integer>(var, val));
-    		}
-    		// head
-    		String[] line = splitNextLine();
-			assertLen(line, 3);
-			int var = parseInt("Error while parsing variable of an axiom head.", line[0], 0, numberOfVariables - 1);
-			int newVal = parseInt("Error while parsing post value of an axiom head.", line[2], 0, domainSizes.get(var) - 1);
-			OperatorRule axiom = dummy.new OperatorRule(conditions, new Pair<Integer, Integer>(var, newVal));
-			axioms.add(axiom);
-    		assertEq(reader.readLine(), RW_ENDAXIOM);
-    	}
+        int numberOfAxioms = parseInt("Parse axioms error", reader.readLine(), 0);
+        axioms = new LinkedHashSet<OperatorRule>((int) (numberOfAxioms / 0.75) + 1);
+        for (int i = 0; i < numberOfAxioms; i++) {
+            assertEq(reader.readLine(), RW_BEGINAXIOM);
+            // body
+            int numConditions = parseInt("Error while parsing number of axiom conditions.", reader.readLine(), 0);
+            Set<Pair<Integer, Integer>> conditions = new HashSet<Pair<Integer,Integer>>((int) (numConditions / 0.75) + 1);
+            for (int j = 0; j < numConditions; j++) {
+                String[] line = splitNextLine();
+                assertLen(line, 2);
+                int var = parseInt("Error while parsing variable of an axiom condition.", line[0], 0, numberOfVariables - 1);
+                int val = parseInt("Error while parsing value of an axiom condition.", line[1], 0, domainSizes.get(var) - 1);
+                conditions.add(new Pair<Integer, Integer>(var, val));
+            }
+            // head
+            String[] line = splitNextLine();
+            assertLen(line, 3);
+            int var = parseInt("Error while parsing variable of an axiom head.", line[0], 0, numberOfVariables - 1);
+            int newVal = parseInt("Error while parsing post value of an axiom head.", line[2], 0, domainSizes.get(var) - 1);
+            OperatorRule axiom = new OperatorRule(conditions, new Pair<Integer, Integer>(var, newVal));
+            axioms.add(axiom);
+            assertEq(reader.readLine(), RW_ENDAXIOM);
+        }
     }
 
     /**
@@ -754,43 +753,43 @@ public class SasParser {
      * @throws IOException
      */
     private void parseVariables() throws IOException {
-    	numberOfVariables = parseInt("Parse variables error", reader.readLine(), 0);
-    	variableNames = new ArrayList<String>(numberOfVariables);
-		domainSizes = new ArrayList<Integer>(numberOfVariables);
-		axiomLayer = new ArrayList<Integer>(numberOfVariables);
-		propositionNames = new ArrayList<List<String>>(numberOfVariables * 4);
-    	for (int var = 0; var < numberOfVariables; var++) {
-    		assertEq(reader.readLine(), RW_BEGINVAR);
-    		variableNames.add(var, reader.readLine());
-    		axiomLayer.add(var, parseInt("Parse variables error", reader.readLine(), -1));
-    		domainSizes.add(var, parseInt("Parse variables error", reader.readLine(), 1));
-    		List<String> names = new ArrayList<String>(domainSizes.get(var));
-    		for (int val = 0; val < domainSizes.get(var); val++) {
-    			String name = processPropositionName(reader.readLine().trim(), names);
-    			names.add(name);
-    		}
-    		propositionNames.add(names);
-    		assertEq(reader.readLine(), RW_ENDVAR);
-        }
-    	if (!fullObservable) {
-            if (Global.BDDManager == null) {
-            	Global.BDDManager = new BDDManager();
+        numberOfVariables = parseInt("Parse variables error", reader.readLine(), 0);
+        variableNames = new ArrayList<String>(numberOfVariables);
+        domainSizes = new ArrayList<Integer>(numberOfVariables);
+        axiomLayer = new ArrayList<Integer>(numberOfVariables);
+        propositionNames = new ArrayList<List<String>>(numberOfVariables * 4);
+        for (int var = 0; var < numberOfVariables; var++) {
+            assertEq(reader.readLine(), RW_BEGINVAR);
+            variableNames.add(var, reader.readLine());
+            axiomLayer.add(var, parseInt("Parse variables error", reader.readLine(), -1));
+            domainSizes.add(var, parseInt("Parse variables error", reader.readLine(), 1));
+            List<String> names = new ArrayList<String>(domainSizes.get(var));
+            for (int val = 0; val < domainSizes.get(var); val++) {
+                String name = processPropositionName(reader.readLine().trim(), names);
+                names.add(name);
             }
-    		Global.BDDManager.initialize(numberOfVariables, domainSizes);
-    	}
+            propositionNames.add(names);
+            assertEq(reader.readLine(), RW_ENDVAR);
+        }
+        if (!fullObservable) {
+            if (Global.BDDManager == null) {
+                Global.BDDManager = new BDDManager();
+            }
+            Global.BDDManager.initialize(numberOfVariables, domainSizes);
+        }
     }
-    
+
     private void parseMutexGroups() throws IOException {
-    	int numMutexGroups = parseInt("Parse mutex gropus error", reader.readLine(), 0);
-    	for (int i = 0; i < numMutexGroups; i++) {
-    		assertEq(reader.readLine(), RW_BEGINMUTEXGROUP);
-    		int numMutexes = parseInt("Parse mutex gropus error", reader.readLine());
-    		for (int j = 0; j < numMutexes; j++)
-    			reader.readLine();
-    		assertEq(reader.readLine(), RW_ENDMUTEXGROUP);
-    	}
+        int numMutexGroups = parseInt("Parse mutex gropus error", reader.readLine(), 0);
+        for (int i = 0; i < numMutexGroups; i++) {
+            assertEq(reader.readLine(), RW_BEGINMUTEXGROUP);
+            int numMutexes = parseInt("Parse mutex gropus error", reader.readLine());
+            for (int j = 0; j < numMutexes; j++)
+                reader.readLine();
+            assertEq(reader.readLine(), RW_ENDMUTEXGROUP);
+        }
     }
-    
+
     /**
      * Transform proposition back to list prefix syntax.
      * 
@@ -798,38 +797,38 @@ public class SasParser {
      *            Proposition to be rewritten.
      * @return Proposition in prefix notation.
      */
-    
+
     private String processPropositionName(String token, List<String> propositionsSoFar) {
-    	if (token.equals("<none of those>")) {
-    		StringBuffer buffer = new StringBuffer();
-    		for (int i = 0; i < propositionsSoFar.size(); i++) {
-    			buffer.append("(not (");
-    			buffer.append(propositionsSoFar.get(i));
-    			buffer.append("))");
-    			if (i < propositionsSoFar.size() - 1) {
-    				buffer.append(" ");
-    			}
-    		}
-    		return buffer.toString();
-    	}
+        if (token.equals("<none of those>")) {
+            StringBuffer buffer = new StringBuffer();
+            for (int i = 0; i < propositionsSoFar.size(); i++) {
+                buffer.append("(not (");
+                buffer.append(propositionsSoFar.get(i));
+                buffer.append("))");
+                if (i < propositionsSoFar.size() - 1) {
+                    buffer.append(" ");
+                }
+            }
+            return buffer.toString();
+        }
         assert token.startsWith("Atom ") || token.startsWith("NegatedAtom");
         if (token.endsWith("()")) {
             // zero parameters
-        	if (token.startsWith("Atom ")) {
-        		token = "(" + token.substring(5).replace("(", "").replace(",", "");
-        	}
-        	else {
-        		token = "(not (" + token.substring(12).replace("(", "").replace(",", "") + ")";
-        	}
+            if (token.startsWith("Atom ")) {
+                token = "(" + token.substring(5).replace("(", "").replace(",", "");
+            }
+            else {
+                token = "(not (" + token.substring(12).replace("(", "").replace(",", "") + ")";
+            }
         }
         else {
-        	// at least one parameter
-        	if (token.startsWith("Atom ")) {
-        		token = "(" + token.substring(5).replace("(", " ").replace(",", "");
-        	}
-        	else {
-        		token = "(not (" + token.substring(12).replace("(", " ").replace(",", "") + ")";
-        	}
+            // at least one parameter
+            if (token.startsWith("Atom ")) {
+                token = "(" + token.substring(5).replace("(", " ").replace(",", "");
+            }
+            else {
+                token = "(not (" + token.substring(12).replace("(", " ").replace(",", "") + ")";
+            }
         }
         return token;
     }
@@ -855,15 +854,15 @@ public class SasParser {
     private String[] splitNextLine() throws IOException {
         return split(reader.readLine());
     }
-    
-//	/**
-//	 * Get the set of variables which are uncertain in the initial state or which
-//	 * can become uncertain because of nondeterministic effects.
-//	 * 
-//	 * @return set of variables which can be uncertain
-//	 */
-//	public Set<Integer> getVariablesWhichCouldBecomeUncertain() {
-//		Set<Integer> vars = new HashSet<Integer>(numStateVars);
-//		
-//	} 
+
+    //	/**
+    //	 * Get the set of variables which are uncertain in the initial state or which
+    //	 * can become uncertain because of nondeterministic effects.
+    //	 * 
+    //	 * @return set of variables which can be uncertain
+    //	 */
+    //	public Set<Integer> getVariablesWhichCouldBecomeUncertain() {
+    //		Set<Integer> vars = new HashSet<Integer>(numStateVars);
+    //		
+    //	} 
 }

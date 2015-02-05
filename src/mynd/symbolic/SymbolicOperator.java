@@ -75,9 +75,6 @@ public class SymbolicOperator extends Operator {
         if (isDeterminized != op.isDeterminized) {
             return false;
         }
-        if (isAbstracted != op.isAbstracted) {
-            return false;
-        }
         if (!observation.equals(op.observation)) {
             return false;
         }

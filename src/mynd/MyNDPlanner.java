@@ -12,13 +12,13 @@ import mynd.heuristic.Heuristic;
 import mynd.heuristic.ZeroHeuristic;
 import mynd.heuristic.FFHeuristic.RPGStrategy;
 import mynd.heuristic.Heuristic.HeuristicStrategy;
-import mynd.heuristic.pdb.CanonicalPDBHeuristic;
 import mynd.heuristic.pdb.PDB;
 import mynd.heuristic.pdb.PatternCollectionSearch;
 import mynd.heuristic.pdb.RandomWalk;
 import mynd.parser.SasParser;
 import mynd.search.AOStarSearch;
 import mynd.search.AbstractSearch;
+import mynd.search.AbstractSearch.Result;
 import mynd.search.LAOStarSearch;
 
 
@@ -35,20 +35,20 @@ public class MyNDPlanner {
      * Enumeration of available search algorithms (AO* search, LAO* search).
      */
     public enum Algorithm {
-        AO_STAR, LAO_STAR
+        AOSTAR, LAOSTAR
     };
 
     /**
      * Heuristic estimator to be used.
      */
     public enum HeuristicEstimator {
-        FF_HEURISTIC, PDBS_HEURISTIC, ZERO_HEURISTIC, HMAX_Heuristic
+        FF, PDBS, ZERO, HMAX
     };
 
     /**
      * Heuristic estimator to be used.
      */
-    private HeuristicEstimator heuristicEstimator = HeuristicEstimator.ZERO_HEURISTIC;
+    private HeuristicEstimator heuristicEstimator = HeuristicEstimator.ZERO;
 
     /**
      * File name of SAS+ file, i.e., translator output.
@@ -60,56 +60,56 @@ public class MyNDPlanner {
      */
     private int timeout = Integer.MAX_VALUE;
 
-	/**
-	 * When assuming full observability, explicit states are used instead of
-	 * belief states even for problem solving.
-	 */
-	public static boolean assumeFullObservability = false;
-	
-	/**
-	 * Weigh belief states by cardinality when computing cost estimates
-	 * in value iteration. // TODO What about AO*?
-	 */
-	public static boolean weighBeliefStatesByCardinality = false;
-	
-	/**
-	 * This id is appended to written outputs to avoid overwriting 
-	 * outputs from parallel running myND planners. Useful on GKI grid.
-	 */
-	public static int runID = -1; 
-    
-	/**
-	 * Start time of the planner. Parsing and initialization of the
-	 * planning problem is not measured.
-	 */
-	private static long startTime;
-	
-	/**
-	 * Time used for preprocessing of the used heuristic.
-	 */
-	private static long timeUsedForPreprocessing;
-	
-	/**
-	 * Search algorithm which is used for solving the problem.
-	 */
-	private AbstractSearch search = null;
-	
+    /**
+     * When assuming full observability, explicit states are used instead of
+     * belief states even for problem solving.
+     */
+    public static boolean assumeFullObservability = false;
+
+    /**
+     * Weigh belief states by cardinality when computing cost estimates
+     * in value iteration. // TODO What about AO*?
+     */
+    public static boolean weighBeliefStatesByCardinality = false;
+
+    /**
+     * This id is appended to written outputs to avoid overwriting 
+     * outputs from parallel running myND planners. Useful on GKI grid.
+     */
+    public static int runID = -1; 
+
+    /**
+     * Start time of the planner. Parsing and initialization of the
+     * planning problem is not measured.
+     */
+    private static long startTime;
+
+    /**
+     * Time used for preprocessing of the used heuristic.
+     */
+    private static long timeUsedForPreprocessing;
+
+    /**
+     * Search algorithm which is used for solving the problem.
+     */
+    private AbstractSearch search = null;
+
     /**
      * Flag to decide whether to dump a plan or not. Could be changed by an option.
      */
     public boolean dumpPlan = false;
-    
+
     /**
      * Simulate the plan to compute expected plan steps (= costs). This may
      * take some time. Could be changed by an option.
      */
     public boolean calculateCosts = false;
-	
+
     /**
      * Set DEBUG true for more output.
      */
     public final static boolean DEBUG = false;
-    
+
     /**
      * Create a myND planner to solve a specific planning task.
      * 
@@ -118,7 +118,7 @@ public class MyNDPlanner {
      * @throws IOException
      */
     public MyNDPlanner(String[] args) throws FileNotFoundException, IOException {
-    	initialize(args);
+        initialize(args);
     }
 
     /**
@@ -148,172 +148,171 @@ public class MyNDPlanner {
             String opt = args[i].substring(1);
             // Search algorithms.
             if (opt.equals("aostar")) {
-                Global.algorithm = Algorithm.AO_STAR;
+                Global.algorithm = Algorithm.AOSTAR;
             }
             else if (opt.equals("laostar")) {
-                Global.algorithm = Algorithm.LAO_STAR;
+                Global.algorithm = Algorithm.LAOSTAR;
             }
             // POND options.
             else if (opt.equals("sensingFirst")) {
-            	AOStarSearch.restrictSensingOps = true;
-            	AOStarSearch.sensingFirst = true;
+                AOStarSearch.restrictSensingOps = true;
+                AOStarSearch.sensingFirst = true;
             }
             else if (opt.equals("weighBeliefStatesByCardinality")) {
-            	weighBeliefStatesByCardinality = true;
+                weighBeliefStatesByCardinality = true;
             }
             // 0/1-heuristic (blind).
             else if (opt.equals("zero")) {
-                heuristicEstimator = HeuristicEstimator.ZERO_HEURISTIC;
+                heuristicEstimator = HeuristicEstimator.ZERO;
             }
             // FF-heuristic.
             else if (opt.equals("ff")) {
-                heuristicEstimator = HeuristicEstimator.FF_HEURISTIC;
+                heuristicEstimator = HeuristicEstimator.FF;
             }           
             // hmax heuristic.
             else if (opt.equals("hmax")) {
-                heuristicEstimator = HeuristicEstimator.HMAX_Heuristic;
+                heuristicEstimator = HeuristicEstimator.HMAX;
             }
             // World state sampling options.
             else if (opt.equals("max")) {
-            	Heuristic.heuristicStrategy = HeuristicStrategy.MAX;
+                Heuristic.heuristicStrategy = HeuristicStrategy.MAX;
             }
             else if (opt.equals("add")) {  
-            	Heuristic.heuristicStrategy = HeuristicStrategy.ADD;
+                Heuristic.heuristicStrategy = HeuristicStrategy.ADD;
             }
             else if (opt.equals("average")) {
-            	Heuristic.heuristicStrategy = HeuristicStrategy.AVERAGE;
+                Heuristic.heuristicStrategy = HeuristicStrategy.AVERAGE;
             }
             else if (opt.equals("numWorldStates")) {
-            	assert Heuristic.numberOfWorldStatesToBeSampled != Integer.MAX_VALUE;
-            	Heuristic.numberOfWorldStatesToBeSampled = new Integer(args[++i]);
-            	assert Heuristic.numberOfWorldStatesToBeSampled > 0;
+                assert Heuristic.numberOfWorldStatesToBeSampled != Integer.MAX_VALUE;
+                Heuristic.numberOfWorldStatesToBeSampled = new Integer(args[++i]);
+                assert Heuristic.numberOfWorldStatesToBeSampled > 0;
             }
             else if (opt.equals("allWorldStates")) {
-            	Heuristic.numberOfWorldStatesToBeSampled = Integer.MAX_VALUE;
+                Heuristic.numberOfWorldStatesToBeSampled = Integer.MAX_VALUE;
             }
             // PDB-heuristic and options.
             else if (opt.equals("pdbs")) {
-                heuristicEstimator = HeuristicEstimator.PDBS_HEURISTIC;
+                heuristicEstimator = HeuristicEstimator.PDBS;
             }
             else if (opt.equals("steps")) {
-            	int steps = new Integer(args[++i]);
+                int steps = new Integer(args[++i]);
                 PatternCollectionSearch.steps = steps;
             }
             else if (opt.equals("pdbTimeout")) {
-            	PatternCollectionSearch.timeout = new Integer(args[++i]);
+                PatternCollectionSearch.timeout = new Integer(args[++i]);
             }
             else if (opt.equals("pdbMaxSize")) {
-            	PDB.pdbMaxSize = new Integer(args[++i]);
-            	assert PDB.pdbMaxSize > 0;
+                PDB.pdbMaxSize = new Integer(args[++i]);
+                assert PDB.pdbMaxSize > 0;
             }
             else if (opt.equals("pdbsMaxSize")) {
-            	PatternCollectionSearch.pdbsOverallMaxSize = new Integer(args[++i]);
-            	assert PatternCollectionSearch.pdbsOverallMaxSize > 0;
-        		assert PatternCollectionSearch.pdbsOverallMaxSize >= PDB.pdbMaxSize;
+                PatternCollectionSearch.pdbsOverallMaxSize = new Integer(args[++i]);
+                assert PatternCollectionSearch.pdbsOverallMaxSize > 0;
+                assert PatternCollectionSearch.pdbsOverallMaxSize >= PDB.pdbMaxSize;
             }
             else if (opt.equals("minImprovement")) {
-            	PatternCollectionSearch.minImprovement = new Double(args[++i]);
+                PatternCollectionSearch.minImprovement = new Double(args[++i]);
             }
             else if (opt.equals("greedyImprovement")) {
-            	PatternCollectionSearch.greedyImprovement = new Double(args[++i]);
+                PatternCollectionSearch.greedyImprovement = new Double(args[++i]);
             }
             else if (opt.equals("noCachingOfPDBs")) {
-            	PatternCollectionSearch.cacheTemporaryPDBs = false;
+                PatternCollectionSearch.cacheTemporaryPDBs = false;
             }
             else if (opt.equals("assumeFO")) {
-            	MyNDPlanner.assumeFullObservability = true;
-            	PatternCollectionSearch.fullObservablePatternSearch = false;
+                MyNDPlanner.assumeFullObservability = true;
+                assert PatternCollectionSearch.fullObservablePatternSearch != false;
             }
             else if (opt.equals("FOPatternSearch")) {
-            	PatternCollectionSearch.fullObservablePatternSearch = true;
-            	assert MyNDPlanner.assumeFullObservability == false;
+                PatternCollectionSearch.fullObservablePatternSearch = true;
             }
             else if (opt.equals("POPatternSearch")) {
-            	PatternCollectionSearch.fullObservablePatternSearch = false;
-            	assert MyNDPlanner.assumeFullObservability == false;
-            }
-            else if (opt.equals("determinization")) {
-            	CanonicalPDBHeuristic.determinization = true;
+                PatternCollectionSearch.fullObservablePatternSearch = false;
+                assert MyNDPlanner.assumeFullObservability == false;
             }
             else if (opt.equals("RWSamples")) {
-            	RandomWalk.NUMBER_OF_SAMPLES = new Integer(args[++i]);
-            	assert RandomWalk.NUMBER_OF_SAMPLES > 0;
+                RandomWalk.NUMBER_OF_SAMPLES = new Integer(args[++i]);
+                assert RandomWalk.NUMBER_OF_SAMPLES > 0;
             }
             // Node expansion options.
             else if (opt.equals("maxNumberOfNodesToExpand")) {
-            	AOStarSearch.maxNumberOfNodesToExpandInOneStep = new Integer(args[++i]);
+                AOStarSearch.maxNumberOfNodesToExpandInOneStep = new Integer(args[++i]);
             }
             else if (opt.equals("rateOfNodesToExpand")) {
-            	AOStarSearch.rateOfNodesToExpandInOneStep = new Double(args[++i]);
-            	assert AOStarSearch.rateOfNodesToExpandInOneStep >= 0.0;
-            	assert AOStarSearch.rateOfNodesToExpandInOneStep <= 1.0;
+                AOStarSearch.rateOfNodesToExpandInOneStep = new Double(args[++i]);
+                assert AOStarSearch.rateOfNodesToExpandInOneStep >= 0.0;
+                assert AOStarSearch.rateOfNodesToExpandInOneStep <= 1.0;
             }
 
             else if (opt.equals("linear")) {
-            	if (args[i+1].startsWith("(")) {
-            		i++;
-            		AOStarSearch.expansionStrategy = AOStarSearch.ExpansionStrategy.LINEAR;
-            		AOStarSearch.expansionRules = new AOStarSearch.ExpansionRules[1][];
-            		parseExpansionRules((args[i].substring(1, args[i].length() - 1)).split(","), 0);
-            	}
-            	else {
-            		System.err.println("Option linear is used incorrectly.");
-            		assert false;
-            	}
+                if (args[i+1].startsWith("(")) {
+                    i++;
+                    AOStarSearch.expansionStrategy = AOStarSearch.ExpansionStrategy.LINEAR;
+                    AOStarSearch.expansionRules = new AOStarSearch.ExpansionRules[1][];
+                    parseExpansionRules((args[i].substring(1, args[i].length() - 1)).split(","), 0);
+                }
+                else {
+                    System.err.println("Option linear is used incorrectly.");
+                    Global.ExitCode.EXIT_INPUT_ERROR.exit();
+                }
             }
             else if (opt.equals("alternate")) {
-            	int n = new Integer(args[++i]);
-            	AOStarSearch.expansionStrategy = AOStarSearch.ExpansionStrategy.ALTERNATE;
-            	AOStarSearch.expansionRules = new AOStarSearch.ExpansionRules[n][];
-            	for (int j = 0; j < n; j++) {
-            		i++;
-            		parseExpansionRules((args[i].substring(1, args[i].length() - 1)).split(","), j);
-            	}
+                int n = new Integer(args[++i]);
+                AOStarSearch.expansionStrategy = AOStarSearch.ExpansionStrategy.ALTERNATE;
+                AOStarSearch.expansionRules = new AOStarSearch.ExpansionRules[n][];
+                for (int j = 0; j < n; j++) {
+                    i++;
+                    parseExpansionRules((args[i].substring(1, args[i].length() - 1)).split(","), j);
+                }
             }
             // Planner option.
             else if (opt.equals("dumpPlan")) {
-            	dumpPlan = true;
+                dumpPlan = true;
             }
             else if (opt.equals("calculateCosts")) {
-            	calculateCosts = true;
+                calculateCosts = true;
             }
             // AO*-search options
             else if (opt.equals("improvePlan")) {
-            	// Be careful. This option leads to a much slower AO*-search.
-            	AOStarSearch.fastUpdate = false;
+                // Be careful. This option leads to a much slower AO*-search.
+                AOStarSearch.fastUpdate = false;
             }
             // (L)AO*-search options
             else if (opt.equals("restrictSensing")) {
-            	AOStarSearch.restrictSensingOps = true;
+                AOStarSearch.restrictSensingOps = true;
             }
             else if (opt.equals("useFirstSensingOp")) {
-            	AOStarSearch.useFirstSensingOp = true;
+                AOStarSearch.useFirstSensingOp = true;
             }
             // Grid options
             else if (opt.equals("runID")) {
-            	// This ID is useful when this planner runs parallel. This id
-            	// is appended to written output to avoid overwriting the outputs
-            	// of another parallel run.
-            	runID = new Integer(args[++i]);
+                // This ID is useful when this planner runs parallel. This id
+                // is appended to written output to avoid overwriting the outputs
+                // of another parallel run.
+                runID = new Integer(args[++i]);
             }
             else {
-            	System.err.println("Option " + opt + " unknown.");
-            	System.exit(9);
+                System.err.println("Option " + opt + " unknown.");
+                Global.ExitCode.EXIT_INPUT_ERROR.exit();
             }
             i++;
         }
         assert args.length >= i + 1;
         sasFilename = args[i];
-        System.err.println(sasFilename + " parsed.");
-        
+        System.out.println(sasFilename + " parsed.");
+
         if (args.length >= i + 2) {
             timeout = Integer.parseInt(args[i + 1]);
         }
         if (args.length >= i + 3) {
             dumpPlan = args[i + 2].equals("1");
         }
+        if (PatternCollectionSearch.fullObservablePatternSearch || MyNDPlanner.assumeFullObservability) {
+            PDB.buildExplicitPDBs = true;
+        }
     }
-    
+
     /**
      * Parse expansion rules. // TODO
      * 
@@ -321,34 +320,34 @@ public class MyNDPlanner {
      * @param index
      */
     private void parseExpansionRules(String[] list, int index) {
-    	AOStarSearch.ExpansionRules[] rules = new AOStarSearch.ExpansionRules[list.length];
-    	for (int i = 0; i < list.length; i++) {
-    		if (list[i].equals("minHeuristic"))
-    			rules[i] = AOStarSearch.ExpansionRules.MIN_H;
-    		else if (list[i].equals("maxHeuristic")) 
-    			rules[i] = AOStarSearch.ExpansionRules.MAX_H;
-    		else if (list[i].equals("minDepth")) {
-    			rules[i] = AOStarSearch.ExpansionRules.MIN_DEPTH;
-    			AOStarSearch.depthIsRelevant = true;
-    		}
-    		else if (list[i].equals("maxDepth")) {
-    			rules[i] = AOStarSearch.ExpansionRules.MAX_DEPTH;
-    			AOStarSearch.depthIsRelevant = true;
-    		}
-    		else if (list[i].equals("oldest"))
-    			rules[i] = AOStarSearch.ExpansionRules.OLDEST;
-    		else if (list[i].equals("newest")) 
-    			rules[i] = AOStarSearch.ExpansionRules.NEWEST;
-    		else if (list[i].equals("random"))
-    			rules[i] = AOStarSearch.ExpansionRules.RANDOM;
-    		else {
-    			System.err.println("Argument " + list[i] + " cannot be parsed.");
-    			System.exit(9);
-    		}
-    	}
-    	AOStarSearch.expansionRules[index] = rules;
+        AOStarSearch.ExpansionRules[] rules = new AOStarSearch.ExpansionRules[list.length];
+        for (int i = 0; i < list.length; i++) {
+            if (list[i].equals("minHeuristic"))
+                rules[i] = AOStarSearch.ExpansionRules.MIN_H;
+            else if (list[i].equals("maxHeuristic")) 
+                rules[i] = AOStarSearch.ExpansionRules.MAX_H;
+            else if (list[i].equals("minDepth")) {
+                rules[i] = AOStarSearch.ExpansionRules.MIN_DEPTH;
+                AOStarSearch.depthIsRelevant = true;
+            }
+            else if (list[i].equals("maxDepth")) {
+                rules[i] = AOStarSearch.ExpansionRules.MAX_DEPTH;
+                AOStarSearch.depthIsRelevant = true;
+            }
+            else if (list[i].equals("oldest"))
+                rules[i] = AOStarSearch.ExpansionRules.OLDEST;
+            else if (list[i].equals("newest")) 
+                rules[i] = AOStarSearch.ExpansionRules.NEWEST;
+            else if (list[i].equals("random"))
+                rules[i] = AOStarSearch.ExpansionRules.RANDOM;
+            else {
+                System.err.println("Argument " + list[i] + " cannot be parsed.");
+                Global.ExitCode.EXIT_INPUT_ERROR.exit();
+            }
+        }
+        AOStarSearch.expansionRules[index] = rules;
     }
-    
+
     /**
      * Print some Garbage Collector stats.
      */
@@ -357,7 +356,7 @@ public class MyNDPlanner {
         long garbageCollectionTime = 0;
 
         for(GarbageCollectorMXBean gc :
-                ManagementFactory.getGarbageCollectorMXBeans()) {
+            ManagementFactory.getGarbageCollectorMXBeans()) {
 
             long count = gc.getCollectionCount();
 
@@ -372,12 +371,12 @@ public class MyNDPlanner {
             }
         }
 
-        System.err.println("Total Garbage Collections: "
-            + totalGarbageCollections);
-        System.err.println("Total Garbage Collection Time (ms): "
-            + garbageCollectionTime);
+        System.out.println("Total Garbage Collections: "
+                + totalGarbageCollections);
+        System.out.println("Total Garbage Collection Time: "
+                + garbageCollectionTime / 1000 + " seconds.");
     }
-    
+
     /**
      * Initialize myND by
      * parsing planning options and the SAS-file.
@@ -387,22 +386,22 @@ public class MyNDPlanner {
      * @throws FileNotFoundException 
      */
     private void initialize(String[] args) throws FileNotFoundException, IOException {
-    	assert Global.problem == null;
+        assert Global.problem == null;
 
-    	// Start to parse arguments given as inputs
-    	parseArgs(args);
+        // Start to parse arguments given as inputs
+        parseArgs(args);
 
-    	// Create either a partially observable or a fully observable problem.
-    	SasParser parser = new SasParser();
-    	parser.parse(new FileInputStream(sasFilename));
+        // Create either a partially observable or a fully observable problem.
+        SasParser parser = new SasParser();
+        parser.parse(new FileInputStream(sasFilename));
 
-    	assert Global.problem != null;
+        assert Global.problem != null;
 
-    	// Do operator preprocessing respectively initialization of BDDs.
-    	Global.problem.finishInitializationAndPreprocessing();
-    	if (DEBUG) {
-    		Global.problem.dump();
-    	}
+        // Do operator preprocessing respectively initialization of BDDs.
+        Global.problem.finishInitializationAndPreprocessing();
+        if (DEBUG) {
+            Global.problem.dump();
+        }
     }
 
     /**
@@ -410,102 +409,136 @@ public class MyNDPlanner {
      * 
      * @return true iff a solution is found.
      */
-    public boolean runProblem() {
-    	assert Global.problem != null;
+    public Result runProblem() {
+        assert Global.problem != null;
 
-    	// Start measuring of preprocessing time.
-    	startTime = System.currentTimeMillis();
+        // Start measuring of preprocessing time.
+        startTime = System.currentTimeMillis();
 
         Heuristic heuristic = null;
-        if (Global.algorithm == Algorithm.AO_STAR || Global.algorithm == Algorithm.LAO_STAR) {
+        if (Global.algorithm == Algorithm.AOSTAR || Global.algorithm == Algorithm.LAOSTAR) {
             switch (heuristicEstimator) {
-                case FF_HEURISTIC:
-                	System.err.println("Heuristic: FF-heuristic.");
-                    heuristic = new FFHeuristic(RPGStrategy.FF);
-                    break;
-                case PDBS_HEURISTIC:
-                	System.err.println("Heuristic: Canonical PDB-heuristic.");
-                    heuristic = new PatternCollectionSearch().search();
-                    break;
-                case ZERO_HEURISTIC:
-                	System.err.println("Heuristic: Zero-heuristic.");
-                    heuristic = new ZeroHeuristic();
-                    break;
-                case HMAX_Heuristic:
-                    System.err.println("Heuristic: HMAX heuristic.");
-                    heuristic = new HMaxHeuristic();
-                    break;
-                default:
-                    assert false;
-                    break;
+            case FF:
+                System.out.println("Heuristic: FF-heuristic.");
+                heuristic = new FFHeuristic(RPGStrategy.FF);
+                break;
+            case PDBS:
+                System.out.println("Heuristic: Canonical PDB-heuristic.");
+                heuristic = new PatternCollectionSearch().search();
+                break;
+            case ZERO:
+                System.out.println("Heuristic: Zero-heuristic.");
+                heuristic = new ZeroHeuristic();
+                break;
+            case HMAX:
+                System.out.println("Heuristic: HMAX heuristic.");
+                heuristic = new HMaxHeuristic();
+                break;
+            default:
+                new Exception("Unknown heuristic estimator.").printStackTrace();
+                Global.ExitCode.EXIT_CRITICAL_ERROR.exit();
             }
         }
 
+        
+        if (DEBUG) {
+            System.out.print("Running Garbage Collection... ");
+        }
+        long gc_start = System.currentTimeMillis();
+        System.gc();
+        if (DEBUG) {
+            System.out.println(String.format("Done, took %.2f s.", (System.currentTimeMillis() - gc_start) / 1000.0) + "\n");
+        }
+
         switch (Global.algorithm) {
-            case AO_STAR:
-            	System.err.println("Algorithm: AO*-search");
-                search = new AOStarSearch();
-                ((AOStarSearch) search).setEstimator(heuristic);
-                break;
-            case LAO_STAR:
-            	System.err.println("Algorithm: LAO*-search");
-                search = new LAOStarSearch();
-                ((LAOStarSearch) search).setEstimator(heuristic);
-                break;
-            default:
-                assert false;
-                break;
+        case AOSTAR:
+            System.out.println("Algorithm: AO*-search");
+            search = new AOStarSearch();
+            ((AOStarSearch) search).setEstimator(heuristic);
+            break;
+        case LAOSTAR:
+            System.out.println("Algorithm: LAO*-search");
+            search = new LAOStarSearch();
+            ((LAOStarSearch) search).setEstimator(heuristic);
+            break;
+        default:
+            new Exception("Unknown search algorithm.").printStackTrace();
+            Global.ExitCode.EXIT_CRITICAL_ERROR.exit();
         }
 
         // Finish measuring of preprocessing time.
         timeUsedForPreprocessing = System.currentTimeMillis() - startTime;
 
         // Set timeout for search.
-        search.setTimeout(timeout - timeUsedForPreprocessing);
-        int planFound = search.run();
+        try {
+            search.setTimeout(timeout - timeUsedForPreprocessing);
+        } catch (Exception e) {
+            e.printStackTrace();
+            Global.ExitCode.EXIT_CRITICAL_ERROR.exit();
+        }
+        Result planFound = search.run();
         // Stop measuring search time.
         long timeUsedOverall = System.currentTimeMillis() - startTime;
-   
-        // Print some statistics.
-        System.err.println();
-        System.err.println("Time needed for preprocess (Parsing, PDBs, ...):    " + timeUsedForPreprocessing / 1000.0 + " seconds.");
-        System.err.println("Time needed for search:                             " + (timeUsedOverall - timeUsedForPreprocessing) / 1000.0 + " seconds.");
-        System.err.println("Time needed:                                        " + timeUsedOverall / 1000.0 + " seconds.");
-        System.err.println();
-        
-        if (planFound == AbstractSearch.PROTAGONIST_WINS) {
-        	search.printStats(calculateCosts);
-        }
-        
-        // Extract and dump plan.
-        if (dumpPlan && planFound == AbstractSearch.PROTAGONIST_WINS) {
-        	search.dumpPlan();
-        }
 
+        // Print some statistics.
+        if (planFound == Result.PROVEN) {
+            System.out.println("INITIAL IS PROVEN!");
+            if (Global.algorithm == Algorithm.AOSTAR) {
+                System.out.println("\nResult: Strong plan found.");
+            }
+            else {
+                System.out.println("\nResult: Strong cyclic plan found.");
+            }
+        } else if (planFound == Result.DISPROVEN) {
+            System.out.println("INITIAL IS DISPROVEN!");
+            if (Global.algorithm == Algorithm.AOSTAR) {
+                System.out.println("\nResult: No strong plan found.");
+            }
+            else {
+                System.out.println("\nResult: No strong cyclic plan found.");
+            }
+        } else {
+            assert planFound == Result.TIMEOUT;
+            System.out.println("INITIAL IS UNPROVEN!");
+            System.out.println("\nResult: No plan found due to time-out.");
+        }
+        System.out.println();
+        System.out.println("Time needed for preprocess (Parsing, PDBs, ...):    " + timeUsedForPreprocessing / 1000.0 + " seconds.");
+        System.out.println("Time needed for search:                             " + (timeUsedOverall - timeUsedForPreprocessing) / 1000.0 + " seconds.");
+        System.out.println("Time needed:                                        " + timeUsedOverall / 1000.0 + " seconds.");
+        System.out.println();
+
+        if (planFound == Result.PROVEN) {
+            search.printStats(calculateCosts);
+
+            // Extract and dump plan.
+            if (dumpPlan) {
+                search.dumpPlan();
+            }
+        }
         printGCStats();
-        
-        return planFound == AbstractSearch.PROTAGONIST_WINS;
+
+        return planFound;
     }
 
     /**
-     * Get start time of the planner. Note: Time for parsing and initialization
-     * of the planning problem is not measured.
+     * Get start time of the planner. 
      * 
      * @return start time
      */
     public static long getStartTime() {
-    	return startTime;
+        return startTime;
     }
-    
+
     /**
      * Get preprocessing time of the used heuristic.
      * 
      * @return preprocessing time
      */
     public static long getTimeUsedForPreprocessing() {
-    	return timeUsedForPreprocessing;
+        return timeUsedForPreprocessing;
     }
-    
+
     /**
      * Return the used search algorithm. Useful for reuse of the solution
      * graph.
@@ -513,11 +546,16 @@ public class MyNDPlanner {
      * @return search
      */
     public AbstractSearch getSearch() {
-    	return search;
+        return search;
     }
-    
+
+    /**
+     * Get name of problem instance.
+     * 
+     * @return name of problem instance
+     */
     public static String getNameOfProblemInstance() {
-    	String[] str = sasFilename.split("/");
-    	return str[str.length - 1].replace(".sas","");
+        String[] str = sasFilename.split("/");
+        return str[str.length - 1].replace(".sas","");
     }
 }

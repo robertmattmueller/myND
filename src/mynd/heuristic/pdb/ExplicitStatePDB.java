@@ -6,6 +6,7 @@ import java.util.Set;
 import java.util.TreeSet;
 
 import mynd.Global;
+import mynd.explicit.ExplicitCondition;
 import mynd.explicit.ExplicitState;
 import mynd.heuristic.graph.Node;
 import mynd.state.State;
@@ -17,7 +18,7 @@ import mynd.state.State;
  * @author Robert Mattmueller
  */
 public class ExplicitStatePDB extends PDB {
-    
+
     /**
      * Sorted pattern, i.e., set of state variables.
      */
@@ -28,7 +29,7 @@ public class ExplicitStatePDB extends PDB {
      * values.
      */
     private double[] patternDatabase;
-    
+
     /**
      * Set true for debug output information.
      */
@@ -40,37 +41,39 @@ public class ExplicitStatePDB extends PDB {
      * @param pattern
      *            The variables contained in the pattern.
      */
-    public ExplicitStatePDB(Set<Integer> pattern) {
-    	long start = System.currentTimeMillis();
-    	assert !pattern.isEmpty();
+    public ExplicitStatePDB(Set<Integer> pattern, ExplicitCondition goal) {
+        long start = System.currentTimeMillis();
+        assert !pattern.isEmpty();
         if (DEBUG) {
-        	System.out.print("Create new ExplicitStatePDB for variables ");
-        	for (int var : pattern) {
+            System.out.print("Create new ExplicitStatePDB for variables ");
+            for (int var : pattern) {
                 System.out.print(var + " ");
             }
         }
         if (pdbMaxSize == -1) // max size is not set by an option
-        	pdbMaxSize = 100000;
+            pdbMaxSize = 100000;
         // This pattern has to be sorted for computation of abstract hash code.
         this.pattern = new TreeSet<Integer>(pattern);
         if (DEBUG) {
-        	System.out.println("Sorted pattern: " + this.pattern);
+            System.out.println("Sorted pattern: " + this.pattern);
         }
-        System.err.println();
+        System.out.println();
         initializePatternDatabase();
-        fillPDB();
-        System.err.print("Created new ExplicitStatePDB for variables ");
-        for (int var : pattern) {
-        	System.err.print(var + " ");
+        fillPDB(goal);
+        if (!noOutputs || DEBUG) {
+            System.out.print("Created new ExplicitStatePDB for variables ");
+            for (int var : pattern) {
+                System.out.print(var + " ");
+            }
+            System.out.println("\nin " + (System.currentTimeMillis() - start)/1000 + "s");
+            System.out.println();
         }
-        System.err.println("\nin " + (System.currentTimeMillis() - start)/1000 + "s");
-        System.err.println();
         if (DEBUG) {
-        	//System.out.println("Average heuristic value is " + averageHeuristicValue());
-        	System.out.println("PDB = " + this);
+            //System.out.println("Average heuristic value is " + averageHeuristicValue());
+            System.out.println("PDB = " + this);
         }
     }
-    
+
     /**
      * Initialize pattern database.
      */
@@ -78,7 +81,7 @@ public class ExplicitStatePDB extends PDB {
         patternDatabase = new double[PDB.numAbstractStates(pattern)];
         Arrays.fill(patternDatabase, Double.POSITIVE_INFINITY);
     }
-    
+
     /**
      * Compute hash code of the abstraction of the given state with respect to
      * the pattern of this PDB.
@@ -92,49 +95,48 @@ public class ExplicitStatePDB extends PDB {
      * @return Hash code of abstraction of the given concrete state
      */
     private int abstractHashCode(ExplicitState state) {
-    	int hashCode = 0;
-    	int oldVar = -1;
-    	for (int var : pattern) {
-    		assert var > oldVar;
-    		hashCode *= Global.problem.domainSizes.get(var);
-    		hashCode += state.variableValueAssignment.get(var);
-    		oldVar = var;
-    	}
-    	return hashCode;
+        int hashCode = 0;
+        int oldVar = -1;
+        for (int var : pattern) {
+            assert var > oldVar;
+            hashCode *= Global.problem.domainSizes.get(var);
+            hashCode += state.variableValueAssignment.get(var);
+            oldVar = var;
+        }
+        return hashCode;
     }
 
     /**
      * Actual computation and storage of abstract cost values
      */
-    private void fillPDB() {
-    	Abstraction abstraction = Global.problem.abstractToPattern(pattern);
-        //abstraction.dump();
-    	AbstractCostComputation comp = new AbstractCostComputation(abstraction);
-    	Collection<Node> nodes = comp.run();
-    	for (Node node : nodes) {
-    		if (node.getCostEstimate() != Node.UNINITIALIZED_COST_ESTIMATE) {
-    			patternDatabase[node.getState().hashCode()] = node.getCostEstimate();
-    		}
-    	}
-    	if (DEBUG) {
-    		System.out.println();
-    		System.out.println("fillPDB()");
-    		System.out.println("pdb lenght " + patternDatabase.length);
-    		
-    		System.out.println("Nodes:");
-    		for (Node node: nodes) {
-    			System.out.print(node);
-    			if (node != null) {
-    				System.out.println(" cost estimate: " + node.getCostEstimate() + " / state: " + node.getState());
-    				System.out.println(" node hash code: " + node.getState().hashCode());
-    			}
-    			else {
-    				System.out.println();
-    			}
-    		}
-    		System.out.println(this);
-    		System.out.println();
-    	}
+    private void fillPDB(ExplicitCondition goal) {
+        Abstraction abstraction = Global.problem.abstractToPattern(pattern, goal);
+        AbstractCostComputation comp = new AbstractCostComputation(abstraction);
+        Collection<Node> nodes = comp.run();
+        for (Node node : nodes) {
+            if (node.getCostEstimate() != Node.UNINITIALIZED_COST_ESTIMATE) {
+                patternDatabase[node.getState().hashCode()] = node.getCostEstimate();
+            }
+        }
+        if (DEBUG) {
+            System.out.println();
+            System.out.println("fillPDB()");
+            System.out.println("pdb lenght " + patternDatabase.length);
+
+            System.out.println("Nodes:");
+            for (Node node: nodes) {
+                System.out.print(node);
+                if (node != null) {
+                    System.out.println(" cost estimate: " + node.getCostEstimate() + " / state: " + node.getState());
+                    System.out.println(" node hash code: " + node.getState().hashCode());
+                }
+                else {
+                    System.out.println();
+                }
+            }
+            System.out.println(this);
+            System.out.println();
+        }
     }
 
     /**
@@ -145,14 +147,10 @@ public class ExplicitStatePDB extends PDB {
      * @return Heuristic value of the given state.
      */
     public double getHeuristic(State state) {
-    	ExplicitState s = (ExplicitState) state;
-        if (abstractHashCode(s) >= patternDatabase.length) {
-            System.err.println("abstract hash code    = " + abstractHashCode(s));
-            System.err.println("pattern database size = " + patternDatabase.length);
-        }
+        ExplicitState s = (ExplicitState) state;
         return patternDatabase[abstractHashCode(s)];
     }
-    
+
     /**
      * Get string representation of this pattern database.
      * 
@@ -164,10 +162,10 @@ public class ExplicitStatePDB extends PDB {
         buffer.append("Pattern Database:\n");
         buffer.append("[ ");
         for (int num = 0; num < patternDatabase.length; num++) {
-        	buffer.append(num + ":" + patternDatabase[num] + ", ");
+            buffer.append(num + ":" + patternDatabase[num] + ", ");
         }
         return buffer.substring(0, buffer.length() - 2) + " ]";
-        	
+
     }
 
     /**
@@ -175,15 +173,15 @@ public class ExplicitStatePDB extends PDB {
      * 
      * @return average heuristic value
      */
-	@Override
-	public double averageHeuristicValue() {
-		double average = 0;
-		for (int i = 0; i < patternDatabase.length; i++) {
-			//assert (patternDatabase[i] != Double.POSITIVE_INFINITY); // true for Blocksworld
-			if (patternDatabase[i] != Double.POSITIVE_INFINITY) {
-				average += patternDatabase[i];
-			}
-		}
-		return (average / patternDatabase.length);
-	}
+    @Override
+    public double averageHeuristicValue() {
+        double average = 0;
+        for (int i = 0; i < patternDatabase.length; i++) {
+            //assert (patternDatabase[i] != Double.POSITIVE_INFINITY); // true for Blocksworld
+            if (patternDatabase[i] != Double.POSITIVE_INFINITY) {
+                average += patternDatabase[i];
+            }
+        }
+        return (average / patternDatabase.length);
+    }
 }

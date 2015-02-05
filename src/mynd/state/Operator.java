@@ -132,7 +132,7 @@ public abstract class Operator {
      * @return true iff each name is unique
      */
     public static boolean assertNoDuplicateInNames(Set<? extends Operator> ops) {
-        Set<String> names = new HashSet<String>((int) (ops.size() * 0.75) + 1);
+        Set<String> names = new HashSet<String>((int) (ops.size() / 0.75) + 1);
         for (Operator op : ops) {
             if (names.contains(op.name)) {
                 System.err.println(op.name + " is a duplicate.");
@@ -154,26 +154,6 @@ public abstract class Operator {
      * @return explicit operator.
      */
     public abstract ExplicitOperator getExplicitOperator();
-
-
-    //    public Set<Integer> getAffectedVariables() {
-    //    	if (affectedVariables == null) {
-    //        	affectedVariables = new HashSet<Integer>(Global.getCapacityForHashTable(Global.problem.numStateVars), Global.LOAD_FACTOR);
-    //        	if (isSensing) {
-    //        		for (Pair<Integer, Integer> varVal : observation) {
-    //        			affectedVariables.add(varVal.first);
-    //        		}
-    //        	}
-    //        	if (isCausative) {
-    //        		for (Set<ExplicitEffect> choice : nondeterministicEffect) {
-    //        			for (ExplicitEffect eff : choice)
-    //        				affectedVariables.add(eff.variable);
-    //        		}
-    //        	}
-    //        	affectedVariables = Collections.unmodifiableSet(affectedVariables);
-    //    	}
-    //    	return affectedVariables;
-    //    }
 
     /**
      * Get all variables which are affected by this operator.

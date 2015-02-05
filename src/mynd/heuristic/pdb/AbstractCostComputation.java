@@ -38,12 +38,12 @@ import mynd.util.Pair;
  * @author Pascal Bercher
  */
 public class AbstractCostComputation {
-    
-	/**
-	 * Treshold for value iteration to determine that the cost values converge.
-	 */
+
+    /**
+     * Treshold for value iteration to determine that the cost values converge.
+     */
     public static final double EPSILON = 0.0001;
-    
+
     /**
      * Discount factor to enforce convergence of value iteration when maximizing (if expected
      * cost value is finite).
@@ -54,17 +54,17 @@ public class AbstractCostComputation {
      * Abstraction of a planning problem.
      */
     private final Abstraction abstraction;
-    
+
     /**
      * Map from hash code of a state to node to avoid duplicates.
      */
     private HashMap<Integer, Node> nodes;
-    
+
     /**
      * For debugging.
      */
     private static int callCounter = 0;
-    
+
     /**
      * Set true for debug output information.
      */
@@ -76,57 +76,9 @@ public class AbstractCostComputation {
      * @param abstraction
      */
     public AbstractCostComputation(Abstraction abstraction) {
-    	this.abstraction = abstraction;
-    	nodes = new HashMap<Integer, Node>((int) (PDB.numAbstractStates(abstraction.pattern) * 0.75) + 1);
+        this.abstraction = abstraction;
+        nodes = new HashMap<Integer, Node>((int) (PDB.numAbstractStates(abstraction.pattern) / 0.75) + 1);
     }
-   
-    /**
-     * TODO: Difference between weakBackwardEvaluation() and computeWeakDiscretePlanSteps(AOStarNode[])
-     * in LAOStarSearch.java?
-     */
-    private void weakBackwardEvaluation() {
-        Queue<Object> queue = new LinkedList<Object>();
-        Set<Node> seenNodes = new LinkedHashSet<Node>();
-
-        for (Node node : nodes.values()) {
-            if (node != null && node.getCostEstimate() == 0) {
-                queue.offer(node);
-            }
-        }
-
-        while (!queue.isEmpty()) {
-            Object object = queue.poll();
-            if (object instanceof Node) {
-                Node node = (Node) object;
-                seenNodes.add(node);
-                for (Connector connector : node.getIncomingConnectors()) {
-                    queue.offer(connector);
-                }
-            }
-            else if (object instanceof Connector) {
-                Connector connector = (Connector) object;
-                Node parent = connector.getParent();     
-                if (!queue.contains(parent) && !seenNodes.contains(parent)) {
-                    queue.offer(parent);
-                }                
-                double minChildCost = Double.POSITIVE_INFINITY;
-                for (Node succ : connector.getChildren()) {
-                    double childCost = succ.getCostEstimate();
-                    if (childCost < minChildCost) {
-                        minChildCost = childCost;
-                    }
-                }
-
-                if (minChildCost + connector.getBaseCost() < parent.getCostEstimate()) {
-                    parent.setCostEstimate(minChildCost + connector.getBaseCost());
-                }
-            }
-            else {
-                assert false;
-            }
-        }
-    }
-    
 
     private void strongBackwardEvaluation() {
         Queue<Object> queue = new LinkedList<Object>();
@@ -180,7 +132,7 @@ public class AbstractCostComputation {
 
         // delete backward-unreachable nodes
         Set<Connector> removedConnectors = new LinkedHashSet<Connector>();
-        
+
         HashSet<Node> removeTheseNodes = new HashSet<Node>();
         for (Node node : nodes.values()) {
             if (!node.isProven()) {  
@@ -193,8 +145,8 @@ public class AbstractCostComputation {
 
         // delete connectors pointing to them
         for (Node node : nodes.values()) {
-        	node.getIncomingConnectors().removeAll(removedConnectors);
-        	node.getOutgoingConnectors().removeAll(removedConnectors);
+            node.getIncomingConnectors().removeAll(removedConnectors);
+            node.getOutgoingConnectors().removeAll(removedConnectors);
         }
     }
 
@@ -204,15 +156,15 @@ public class AbstractCostComputation {
 
         Set<Node> goalNodes = new LinkedHashSet<Node>(); // store goal node during forward construction
         for (Node node : nodes.values()) {
-        	if (node.isGoalNode) {
-        		goalNodes.add(node);
-        		for (Connector c : node.getIncomingConnectors()) {
-        			if (!c.getParent().isGoalNode && c.isSafe) {
-        				connectorsAtCurrentDistance.add(c);
-        				backwardReachableConnectors.add(c);
-        			}
-        		}
-        	}
+            if (node.isGoalNode) {
+                goalNodes.add(node);
+                for (Connector c : node.getIncomingConnectors()) {
+                    if (!c.getParent().isGoalNode && c.isSafe) {
+                        connectorsAtCurrentDistance.add(c);
+                        backwardReachableConnectors.add(c);
+                    }
+                }
+            }
 
         }
 
@@ -232,32 +184,32 @@ public class AbstractCostComputation {
         }
 
         for (Node node : nodes.values()) {
-        	for (Connector c : node.getOutgoingConnectors()) {
-        		c.isSafe = backwardReachableConnectors.contains(c);
-        	}
+            for (Connector c : node.getOutgoingConnectors()) {
+                c.isSafe = backwardReachableConnectors.contains(c);
+            }
         }
 
         return backwardReachableConnectors;
     }
 
     private int deleteUnprovenConnectors(Set<Connector> backwardReachableConnectors) {
-    	Set<Node> goalNodes = new LinkedHashSet<Node>();
-    	for (Node node : nodes.values()) {
-    		if (node.isGoalNode) {
-    			goalNodes.add(node);
-    		}
-    	}
+        Set<Node> goalNodes = new LinkedHashSet<Node>();
+        for (Node node : nodes.values()) {
+            if (node.isGoalNode) {
+                goalNodes.add(node);
+            }
+        }
 
         Queue<Connector> deleteQueue = new LinkedList<Connector>();
         Map<Node, Integer> counter = new LinkedHashMap<Node, Integer>();
-        
+
         for (Connector c : backwardReachableConnectors) {
-        	if (counter.containsKey(c.getParent())) {
-        		counter.put(c.getParent(), counter.get(c.getParent()) + 1);
-        	}
-        	else {
-        		counter.put(c.getParent(), 1);
-        	}
+            if (counter.containsKey(c.getParent())) {
+                counter.put(c.getParent(), counter.get(c.getParent()) + 1);
+            }
+            else {
+                counter.put(c.getParent(), 1);
+            }
         }
 
         for (Connector c : backwardReachableConnectors) {
@@ -275,29 +227,29 @@ public class AbstractCostComputation {
 
             Node parent = c.getParent();
             if (counter.containsKey(parent)) {
-            	assert counter.get(parent) > 0;
+                assert counter.get(parent) > 0;
                 counter.put(parent, counter.get(parent) - 1);
                 if (counter.get(parent) == 0) {
                     for (Connector d : parent.getIncomingConnectors()) {
-                    	if (d.isSafe && !deleteQueue.contains(d)) {
-                    		deleteQueue.add(d);
-                    	}
+                        if (d.isSafe && !deleteQueue.contains(d)) {
+                            deleteQueue.add(d);
+                        }
                     }
                 }
             }
             else {
-            	assert false;
+                assert false;
             }
         }
 
         int num_safe = 0;
 
         for (Node node : nodes.values()) {
-        	for (Connector c : node.getOutgoingConnectors()) {
-        		if (c.isSafe) {
-        			num_safe++;
-        		}
-        	}
+            for (Connector c : node.getOutgoingConnectors()) {
+                if (c.isSafe) {
+                    num_safe++;
+                }
+            }
         }
 
         return num_safe;
@@ -310,28 +262,28 @@ public class AbstractCostComputation {
     private void forwardConstruction() {
         Queue<Node> queue = new LinkedList<Node>();
         if (DEBUG) {
-        	abstraction.dump();
+            abstraction.dump();
         }
         for (State init : abstraction.getInitialState()) {
-        	lookupAndInsert(init, queue);
+            lookupAndInsert(init, queue);
         }
         while (!queue.isEmpty()) {
             Node node = queue.poll();
-        	if (DEBUG) {
-        		System.out.println("Process node " + node + " with " + node.getState().getApplicableOps(abstraction.operators).size() + " applicable ops.");
-        	}
+            if (DEBUG) {
+                System.out.println("Process node " + node + " with " + node.getState().getApplicableOps(abstraction.operators).size() + " applicable ops.");
+            }
             for (Operator op : node.getState().getApplicableOps(abstraction.operators)) {
-            	Set<Node> children = new LinkedHashSet<Node>();
-            	Set<State> newStates = node.getState().apply(op);
-            	for (State state : newStates) {
-            		Node newNode = lookupAndInsert(state, queue);
-            		children.add(newNode);
-            	}
-            	new Connector(node, children, op);
+                Set<Node> children = new LinkedHashSet<Node>();
+                Set<State> newStates = node.getState().apply(op);
+                for (State state : newStates) {
+                    Node newNode = lookupAndInsert(state, queue);
+                    children.add(newNode);
+                }
+                new Connector(node, children, op);
             }
         }
         if (DEBUG) {
-        	System.out.println("Finished forward construction.");
+            System.out.println("Finished forward construction.");
         }
     }
 
@@ -339,9 +291,9 @@ public class AbstractCostComputation {
      * Generate Graphviz visualization.
      */
     private void generateVisualizations() {
-    	
-    	System.out.println("VISUALIZING");
-    	
+
+        System.out.println("VISUALIZING");
+
         String graphvizOutput = toStringGraphviz();
         String graphvizFilename = graphvizFilename();
         try {
@@ -382,15 +334,15 @@ public class AbstractCostComputation {
      * @return node which corresponds to given state.
      */
     Node lookupAndInsert(State state, Queue<Node> queue) {
-    	if (!nodes.containsKey(state.hashCode())) {
-    		Node n = new Node(state);
-    		nodes.put(state.hashCode(), n);
-    		queue.offer(n);
-    	}
-    	else {
-    		assert nodes.get(state.hashCode()).getState().equals(state);
-    	}
-    	return nodes.get(state.hashCode());
+        if (!nodes.containsKey(state.hashCode())) {
+            Node n = new Node(state);
+            nodes.put(state.hashCode(), n);
+            queue.offer(n);
+        }
+        else {
+            assert nodes.get(state.hashCode()).getState().equals(state);
+        }
+        return nodes.get(state.hashCode());
     }
 
     /**
@@ -406,7 +358,7 @@ public class AbstractCostComputation {
         }
 
         // Auxiliary data structures.
-        Map<Node, Double> oldCostEstimate = new HashMap<Node, Double>((int) (nodes.size() * 0.75) + 1);
+        Map<Node, Double> oldCostEstimate = new HashMap<Node, Double>((int) (nodes.size() / 0.75) + 1);
 
         // Main loop.
         boolean converged = false;
@@ -414,67 +366,67 @@ public class AbstractCostComputation {
             // Update.
             for (Node node : nodes.values()) {
                 if (node != null) {
-                	oldCostEstimate.put(node, node.getCostEstimate());
+                    oldCostEstimate.put(node, node.getCostEstimate());
                     if (DEBUG) {
-                    	System.out.println("Node " + node + " old cost estimate is " + oldCostEstimate.get(node));
+                        System.out.println("Node " + node + " old cost estimate is " + oldCostEstimate.get(node));
                     }
                     if (!node.isGoalNode) {
                         node.setCostEstimate(Node.UNINITIALIZED_COST_ESTIMATE);
                     }
                 }
                 else {
-                	assert false;
+                    assert false;
                 }
             }
             if (DEBUG) {
-            	System.out.println("Value iteration.");
+                System.out.println("Value iteration.");
             }
             for (Node node : nodes.values()) {
-            	if (DEBUG) {
-            		System.out.println("Process node " + node);
-            	}
+                if (DEBUG) {
+                    System.out.println("Process node " + node);
+                }
                 if (!node.isGoalNode) {
-                	if (DEBUG) {
-                		System.out.println("Node is no goal node and has " + node.getOutgoingConnectors().size() + " outgoing connectors.");
-                	}
+                    if (DEBUG) {
+                        System.out.println("Node is no goal node and has " + node.getOutgoingConnectors().size() + " outgoing connectors.");
+                    }
                     for (Connector connector : node.getOutgoingConnectors()) {
                         double connectorValueMax = Double.NEGATIVE_INFINITY;
                         double connectorValueSum = 0.0;
                         double sumOfChildrenCardinality = 0.0;
                         for (Node child : connector.getChildren()) {
-                        	if (DEBUG) {
-                        		System.out.println("child " + child);
-                        	}
+                            if (DEBUG) {
+                                System.out.println("child " + child);
+                            }
                             double childEstimate = oldCostEstimate.get(child);
                             if (childEstimate > connectorValueMax) {
                                 connectorValueMax = childEstimate;
                             }
                             if (MyNDPlanner.weighBeliefStatesByCardinality && node.getState() instanceof BeliefState) {
-                            	double numWorldStates = ((BeliefState) child.getState()).getNumberOfWorldStates();
-                            	connectorValueSum += numWorldStates * childEstimate;
-                            	sumOfChildrenCardinality += numWorldStates;
+                                double numWorldStates = ((BeliefState) child.getState()).getNumberOfWorldStates();
+                                connectorValueSum += numWorldStates * childEstimate;
+                                sumOfChildrenCardinality += numWorldStates;
                             } else {
-                            	assert (connectorValueSum <= connectorValueSum + childEstimate);
-                            	connectorValueSum += childEstimate;
+                                assert (connectorValueSum <= connectorValueSum + childEstimate);
+                                connectorValueSum += childEstimate;
                             }
                         }
-                        
+
                         double connectorValueAvg;
                         if (MyNDPlanner.weighBeliefStatesByCardinality && node.getState() instanceof BeliefState) {
-                        	connectorValueAvg = connectorValueSum / sumOfChildrenCardinality;
+                            connectorValueAvg = connectorValueSum / sumOfChildrenCardinality;
                         } else {
-//                        	if (connectorValueSum == Double.POSITIVE_INFINITY) {
-//                        		System.out.println("1");
-//                        		assert false;
-//                        	}
-//                        	if (connectorValueSum == Double.MAX_VALUE) {
-//                        		System.out.println("2");
-//                        		assert false;
-//                        	}
-//                        	System.out.println("Connector value sum " + connectorValueSum);
-                        	connectorValueAvg = connectorValueSum / connector.getChildren().size();
+                            //                        	if (connectorValueSum == Double.POSITIVE_INFINITY) {
+                            //                        		System.out.println("1");
+                            //                        		assert false;
+                            //                        	}
+                            //                        	if (connectorValueSum == Double.MAX_VALUE) {
+                            //                        		System.out.println("2");
+                            //                        		assert false;
+                            //                        	}
+                            //                        	System.out.println("Connector value sum " + connectorValueSum);
+                            connectorValueAvg = connectorValueSum / connector.getChildren().size();
                         }
-               
+
                         boolean useMax = false; // Experiments show that it seems to be preferable to average about child nodes.
                         if (useMax) {
                             if (connector.getBaseCost() + connectorValueMax * DISCOUNT_FACTOR < node.getCostEstimate()) {
@@ -493,68 +445,45 @@ public class AbstractCostComputation {
             // convergence test
             converged = true;
             for (Node node : nodes.values()) {
-            	if (DEBUG) {
-            		System.out.println(node);
-            		System.out.println("oldestimate " + oldCostEstimate.get(node));
-            	}
+                if (DEBUG) {
+                    System.out.println(node);
+                    System.out.println("oldestimate " + oldCostEstimate.get(node));
+                }
                 if (node != null && Math.abs(node.getCostEstimate() - oldCostEstimate.get(node)) > AbstractCostComputation.EPSILON) {
                     converged = false;
                     break;
                 }
             }
-            
+
         } while (!converged);
     }
 
     public Collection<Node> run() {
-    	forwardConstruction(); 
-    	if (DEBUG) {
-    		assert Connector.consistencyTestForConnectors(nodes.values());
-    		printGraph("forwardgraph_" + callCounter + "_" + abstraction.pattern);
-    	}
-    	assert Global.algorithm == MyNDPlanner.Algorithm.AO_STAR || Global.algorithm == MyNDPlanner.Algorithm.LAO_STAR;
-    	if (Global.algorithm == MyNDPlanner.Algorithm.AO_STAR) {
-    		if (CanonicalPDBHeuristic.determinization && (Global.problem.isFullObservable || MyNDPlanner.assumeFullObservability)) {
-    			weakBackwardEvaluation(); 
-    		}
-    		else {
-    			strongBackwardEvaluation();
-    		}
-    	}
-    	else { // Global.algorithm == ReachabilityGameSolver.Algorithm.LAO_STAR
-    		if (CanonicalPDBHeuristic.determinization && (Global.problem.isFullObservable || MyNDPlanner.assumeFullObservability)) {
-    			weakBackwardEvaluation();
-    		}
-    		else if (CanonicalPDBHeuristic.determinization) {
-    			assert false; // Not supported.
-    			strongBackwardEvaluation();
-    		}
-    		else {
-    			backwardRestriction();
-    			if (DEBUG) {
-    				System.out.println("Finished backward restriction.");
-    				printGraph("backwardRestriction_" + callCounter + "_" + abstraction.pattern);
-    			}
-    			performValueIteration();
-    			if (DEBUG) {
-    				System.out.println("Finished value iteration.");
-    			}
-    		}    		
-    	}
-    	boolean visualize = false;
-    	if (visualize) {
-    		generateVisualizations();
-    	}   	
-    	assert (nodes.values().size() == new HashSet<Node>(nodes.values()).size()); // no duplicates
-    	// Delete states (BDDs) of nodes.
-    	if (!Global.problem.isFullObservable && !MyNDPlanner.assumeFullObservability && !PatternCollectionSearch.fullObservablePatternSearch) {
-    		for (Node node : nodes.values()) {
-    			node.free();
-    		}
-    	}
-    	// TODO Delete abstracted operators (BDDs)?
-    	callCounter++;
-    	return nodes.values();
+        forwardConstruction(); 
+        switch(Global.algorithm) {
+            case AOSTAR:
+                // Strong planning.
+                strongBackwardEvaluation();
+                break;
+            default:
+                // Strong cyclic planning.
+                backwardRestriction();
+                performValueIteration();
+        }
+        boolean visualize = false; // For debugging.
+        if (visualize) {
+            generateVisualizations();
+        }   	
+        assert (nodes.values().size() == new HashSet<Node>(nodes.values()).size()); // no duplicates
+        // Delete states (BDDs) of nodes.
+        if (!Global.problem.isFullObservable && !MyNDPlanner.assumeFullObservability && !PatternCollectionSearch.fullObservablePatternSearch) {
+            for (Node node : nodes.values()) {
+                node.free();
+            }
+        }
+        // TODO Delete abstracted operators (BDDs)?
+        callCounter++;
+        return nodes.values();
     }
 
     private String toStringGraphviz() {
@@ -571,11 +500,11 @@ public class AbstractCostComputation {
                 else if (node.isProven()) {
                     styleString = provenStateStyle;
                 }
-                
+
                 String nodeString = node.toString();
                 nodeString = nodeString.replace(" ", "").replace(",", "").replace("<", "").replace(">", "").replace(":", "");
                 nodeString = nodeString.substring(1, nodeString.length()-1);
-                                
+
                 buffer.append("    node_" + nodeString + " [label=\"" + node.getCostEstimate() + "\"]"
                         + styleString + ";\n");
             }
@@ -610,15 +539,15 @@ public class AbstractCostComputation {
                     label.append(", ");
                 }
             }
-            
+
             String fromString = from.toString();
             fromString = fromString.replace(" ", "").replace(",", "").replace("<", "").replace(">", "").replace(":", "");
             fromString = fromString.substring(1, fromString.length()-1);
-            
+
             String toString = to.toString();
             toString = toString.replace(" ", "").replace(",", "").replace("<", "").replace(">", "").replace(":", "");
             toString = toString.substring(1, toString.length()-1);
-            
+
             buffer.append("    node_" + fromString + " -> node_" + toString + " [label=\"" + label.toString() + "\"];\n");
         }
         buffer.append("}\n");
@@ -628,16 +557,16 @@ public class AbstractCostComputation {
     private void unsafeAndProvenLabelling() {
         int num_safe = 0;
         for (Node node : nodes.values()) {
-        	for (Connector c : node.getOutgoingConnectors()) {
-        		c.isSafe = true;
-        		num_safe++;
-        	}
+            for (Connector c : node.getOutgoingConnectors()) {
+                c.isSafe = true;
+                num_safe++;
+            }
         }
         if (DEBUG) {
-        	System.out.println("Number of connectors: " + num_safe);
+            System.out.println("Number of connectors: " + num_safe);
         }
         int old_num_safe;
- 
+
         int i = 0;
         do {
             old_num_safe = num_safe;
@@ -645,15 +574,15 @@ public class AbstractCostComputation {
             // backward reachable connectors
             Set<Connector> backwardReachable = computeBackwardReachableConnectors();
             if (DEBUG) {
-            	printGraphAndMarkConnectors("backward_reachable_" + callCounter + "_" + i + "_" + abstraction.pattern, backwardReachable);
-            	System.out.println("number of backward reachable connectors: " + backwardReachable.size());
+                printGraphAndMarkConnectors("backward_reachable_" + callCounter + "_" + i + "_" + abstraction.pattern, backwardReachable);
+                System.out.println("number of backward reachable connectors: " + backwardReachable.size());
             }
 
             // unprovable connectors
             num_safe = deleteUnprovenConnectors(backwardReachable);
             if (DEBUG) {
-            	System.out.println("backward_reachable_" + callCounter + "_" + i + "_" + abstraction.pattern);
-            	System.out.println("num_safe: " + num_safe);
+                System.out.println("backward_reachable_" + callCounter + "_" + i + "_" + abstraction.pattern);
+                System.out.println("num_safe: " + num_safe);
             }
             i++;
         } while (num_safe != old_num_safe);
@@ -673,18 +602,18 @@ public class AbstractCostComputation {
     }
 
     public void printGraph(String filename) {
-    	printGraphAndMarkConnectors(filename, Collections.<Connector> emptySet());
+        printGraphAndMarkConnectors(filename, Collections.<Connector> emptySet());
     }
-    
+
     public void printGraphAndMarkConnectors(String filename, Collection<Connector> connectors) {
-    	File graph = new File(filename + ".dot");
-    	try {
-    		FileWriter writer = new FileWriter(graph);
-    		writer.write(new mynd.heuristic.pdb.GraphvizWriter().printGraphAsDot(nodes.values(), connectors));
-    		writer.flush();
-    		writer.close();
-    	} catch (IOException e) {
-    		e.printStackTrace();
-    	} 
+        File graph = new File(filename + ".dot");
+        try {
+            FileWriter writer = new FileWriter(graph);
+            writer.write(new mynd.heuristic.pdb.GraphvizWriter().printGraphAsDot(nodes.values(), connectors));
+            writer.flush();
+            writer.close();
+        } catch (IOException e) {
+            e.printStackTrace();
+        } 
     }
 }

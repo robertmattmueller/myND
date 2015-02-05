@@ -123,4 +123,18 @@ public abstract class State {
         	checkedOps = null;
     	}
     }
+    
+    /**
+     * Return this state as a condition.
+     * 
+     * @return
+     */
+    public abstract Condition toCondition();
+    
+    /**
+     * String representation of this state with proposition names.
+     * 
+     * @return string representation of this state
+     */
+    public abstract String toStringWithPropositionNames();
 }
