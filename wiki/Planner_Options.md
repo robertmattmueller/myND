@@ -155,8 +155,6 @@ The default configuration when using pattern databases for FOND planning is show
 
 * `-assumeFO` Assume full observability, such that explicit states instead of belief states are used for the PDB heuristic. During search, explicit states are drawn randomly from belief state, and their heuristic values are aggregated. By ***default*** this option is not used. **Note**: In this case it is possible to specify how heuristic values are aggregated. Possible options are `-max`, `-add`, `-average`, `-numWorldStates INTEGER` and `-allWorldStates` as used in FF heuristic. You cannot use the options `-POPatternSearch` or `-FOPatternSearch` together with `-assumeFO`.
 
-* `-determinization` All-outcome determinization of the *abstracted* actions. Only available when the option `-assumeFO` is used. By ***default*** this option is not used. 
-
 * `-FOPatternSearch` Assume full observability only during the pattern search. After choosing the final pattern collection, this assumption is refused, such that the final pattern databases are symbolic and the knowledge about partial observability is contained in the heuristic value. In general this approach performs better than using symbolic pattern databases during the pattern selection process. By ***default*** this option is used.
 
 * `-POPatternSearch` Pattern search is done in the belief space differently from `-FOPatternSearch`. This could lead to a more accurate PDB heuristic, but is less efficient in time and space than using a fully observable pattern search. By ***default*** this option is not used.
