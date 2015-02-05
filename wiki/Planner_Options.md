@@ -81,7 +81,7 @@ A blind heuristic, where non-goal states get assigned a heuristic value of 1, an
 -zero
 ```
 
-## Delete Relaxation
+## FF heuristic
 Relaxed planning graph heuristic as implemented in the FF planning system by Jörg Hoffmann. All-outcome determinization for nondeterministic effects is used.
 
 ```
@@ -89,6 +89,16 @@ Relaxed planning graph heuristic as implemented in the FF planning system by Jö
 
 -ff [-max] [-add] [-average] [-numWorldStates INTEGER] [-allWorldStates]
 ```
+
+## Max heuristic
+Forward cost heuristic based on relaxed planning graph. All-outcome determinization for nondeterministic effects is used.
+
+```
+#!bash
+
+-hmax [-max] [-add] [-average] [-numWorldStates INTEGER] [-allWorldStates]
+```
+
 
 ### POND Options 
 These options are **only** useful for **POND** planning. They control how to aggregate heuristic values of world states in a belief state B when computing a heuristic value for B.
