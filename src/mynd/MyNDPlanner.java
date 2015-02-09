@@ -5,7 +5,9 @@ import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.lang.management.GarbageCollectorMXBean;
 import java.lang.management.ManagementFactory;
+import java.util.Locale;
 
+import mynd.Global.ExitCode;
 import mynd.heuristic.FFHeuristic;
 import mynd.heuristic.HMaxHeuristic;
 import mynd.heuristic.Heuristic;
@@ -131,7 +133,17 @@ public class MyNDPlanner {
      * @throws FileNotFoundException
      */
     public static void main(String[] args) throws IOException, FileNotFoundException {
-        new MyNDPlanner(args).runProblem();
+        Locale.setDefault(Locale.US); // commas...
+        Result result = new MyNDPlanner(args).runProblem();
+        
+        switch(result) {
+            case PROVEN:
+                ExitCode.EXIT_PROVEN.exit();
+            case DISPROVEN:
+                ExitCode.EXIT_DISPROVEN.exit();
+            default:
+                ExitCode.EXIT_UNPROVEN.exit();
+        }
     }
 
     /**
@@ -239,17 +251,11 @@ public class MyNDPlanner {
             else if (opt.equals("maxNumberOfNodesToExpand")) {
                 AOStarSearch.maxNumberOfNodesToExpandInOneStep = new Integer(args[++i]);
             }
-            else if (opt.equals("rateOfNodesToExpand")) {
-                AOStarSearch.rateOfNodesToExpandInOneStep = new Double(args[++i]);
-                assert AOStarSearch.rateOfNodesToExpandInOneStep >= 0.0;
-                assert AOStarSearch.rateOfNodesToExpandInOneStep <= 1.0;
-            }
-
             else if (opt.equals("linear")) {
                 if (args[i+1].startsWith("(")) {
                     i++;
-                    AOStarSearch.expansionStrategy = AOStarSearch.ExpansionStrategy.LINEAR;
-                    AOStarSearch.expansionRules = new AOStarSearch.ExpansionRules[1][];
+                    LAOStarSearch.expansionStrategy = LAOStarSearch.ExpansionStrategy.LINEAR;
+                    LAOStarSearch.expansionRules = new LAOStarSearch.ExpansionRules[1][];
                     parseExpansionRules((args[i].substring(1, args[i].length() - 1)).split(","), 0);
                 }
                 else {
@@ -259,8 +265,8 @@ public class MyNDPlanner {
             }
             else if (opt.equals("alternate")) {
                 int n = new Integer(args[++i]);
-                AOStarSearch.expansionStrategy = AOStarSearch.ExpansionStrategy.ALTERNATE;
-                AOStarSearch.expansionRules = new AOStarSearch.ExpansionRules[n][];
+                LAOStarSearch.expansionStrategy = LAOStarSearch.ExpansionStrategy.ALTERNATE;
+                LAOStarSearch.expansionRules = new LAOStarSearch.ExpansionRules[n][];
                 for (int j = 0; j < n; j++) {
                     i++;
                     parseExpansionRules((args[i].substring(1, args[i].length() - 1)).split(","), j);
@@ -274,16 +280,9 @@ public class MyNDPlanner {
                 calculateCosts = true;
             }
             // AO*-search options
-            else if (opt.equals("improvePlan")) {
-                // Be careful. This option leads to a much slower AO*-search.
-                AOStarSearch.fastUpdate = false;
-            }
             // (L)AO*-search options
             else if (opt.equals("restrictSensing")) {
                 AOStarSearch.restrictSensingOps = true;
-            }
-            else if (opt.equals("useFirstSensingOp")) {
-                AOStarSearch.useFirstSensingOp = true;
             }
             // Grid options
             else if (opt.equals("runID")) {
@@ -320,32 +319,32 @@ public class MyNDPlanner {
      * @param index
      */
     private void parseExpansionRules(String[] list, int index) {
-        AOStarSearch.ExpansionRules[] rules = new AOStarSearch.ExpansionRules[list.length];
+        LAOStarSearch.ExpansionRules[] rules = new LAOStarSearch.ExpansionRules[list.length];
         for (int i = 0; i < list.length; i++) {
             if (list[i].equals("minHeuristic"))
-                rules[i] = AOStarSearch.ExpansionRules.MIN_H;
+                rules[i] = LAOStarSearch.ExpansionRules.MIN_H;
             else if (list[i].equals("maxHeuristic")) 
-                rules[i] = AOStarSearch.ExpansionRules.MAX_H;
+                rules[i] = LAOStarSearch.ExpansionRules.MAX_H;
             else if (list[i].equals("minDepth")) {
-                rules[i] = AOStarSearch.ExpansionRules.MIN_DEPTH;
-                AOStarSearch.depthIsRelevant = true;
+                rules[i] = LAOStarSearch.ExpansionRules.MIN_DEPTH;
+                LAOStarSearch.depthIsRelevant = true;
             }
             else if (list[i].equals("maxDepth")) {
-                rules[i] = AOStarSearch.ExpansionRules.MAX_DEPTH;
-                AOStarSearch.depthIsRelevant = true;
+                rules[i] = LAOStarSearch.ExpansionRules.MAX_DEPTH;
+                LAOStarSearch.depthIsRelevant = true;
             }
             else if (list[i].equals("oldest"))
-                rules[i] = AOStarSearch.ExpansionRules.OLDEST;
+                rules[i] = LAOStarSearch.ExpansionRules.OLDEST;
             else if (list[i].equals("newest")) 
-                rules[i] = AOStarSearch.ExpansionRules.NEWEST;
+                rules[i] = LAOStarSearch.ExpansionRules.NEWEST;
             else if (list[i].equals("random"))
-                rules[i] = AOStarSearch.ExpansionRules.RANDOM;
+                rules[i] = LAOStarSearch.ExpansionRules.RANDOM;
             else {
                 System.err.println("Argument " + list[i] + " cannot be parsed.");
                 Global.ExitCode.EXIT_INPUT_ERROR.exit();
             }
         }
-        AOStarSearch.expansionRules[index] = rules;
+        LAOStarSearch.expansionRules[index] = rules;
     }
 
     /**
@@ -453,13 +452,11 @@ public class MyNDPlanner {
         switch (Global.algorithm) {
         case AOSTAR:
             System.out.println("Algorithm: AO*-search");
-            search = new AOStarSearch();
-            ((AOStarSearch) search).setEstimator(heuristic);
+            search = new AOStarSearch(heuristic);
             break;
         case LAOSTAR:
             System.out.println("Algorithm: LAO*-search");
-            search = new LAOStarSearch();
-            ((LAOStarSearch) search).setEstimator(heuristic);
+            search = new LAOStarSearch(heuristic);
             break;
         default:
             new Exception("Unknown search algorithm.").printStackTrace();

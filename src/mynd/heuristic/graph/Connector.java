@@ -24,7 +24,7 @@ public class Connector {
     Operator operator; 
 
     int unsatisfiedPreconditionCount;
-    double baseCost;
+    double cost;
 
     public boolean isSafe = false;
 
@@ -41,7 +41,7 @@ public class Connector {
         	child.incomingConnectors.get(name).add(this);
         }
         unsatisfiedPreconditionCount = children.size();
-        this.baseCost = op.getCost();
+        this.cost = op.getCost();
     }
 
     @Override
@@ -86,12 +86,8 @@ public class Connector {
         this.unsatisfiedPreconditionCount = unsatisfiedPreconditionCount;
     }
     
-    public void setBaseCost(double baseCost) {
-    	this.baseCost = baseCost;
-    }
-    
-    public double getBaseCost() {
-    	return this.baseCost;
+    public double getCost() {
+    	return cost;
     }
 
     @Override

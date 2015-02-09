@@ -117,8 +117,8 @@ public class AbstractCostComputation {
                     }
                 }
 
-                if (maxChildCost + connector.getBaseCost() < parent.getCostEstimate()) {
-                    parent.setCostEstimate(maxChildCost + connector.getBaseCost());
+                if (maxChildCost + connector.getCost() < parent.getCostEstimate()) {
+                    parent.setCostEstimate(maxChildCost + connector.getCost());
                 }
             }
             else {
@@ -392,7 +392,7 @@ public class AbstractCostComputation {
                     for (Connector connector : node.getOutgoingConnectors()) {
                         double connectorValueMax = Double.NEGATIVE_INFINITY;
                         double connectorValueSum = 0.0;
-                        double sumOfChildrenCardinality = 0.0;
+//                        double sumOfChildrenCardinality = 0.0;
                         for (Node child : connector.getChildren()) {
                             if (DEBUG) {
                                 System.out.println("child " + child);
@@ -401,41 +401,32 @@ public class AbstractCostComputation {
                             if (childEstimate > connectorValueMax) {
                                 connectorValueMax = childEstimate;
                             }
-                            if (MyNDPlanner.weighBeliefStatesByCardinality && node.getState() instanceof BeliefState) {
-                                double numWorldStates = ((BeliefState) child.getState()).getNumberOfWorldStates();
-                                connectorValueSum += numWorldStates * childEstimate;
-                                sumOfChildrenCardinality += numWorldStates;
-                            } else {
+//                            if (MyNDPlanner.weighBeliefStatesByCardinality && node.getState() instanceof BeliefState) {
+//                                double numWorldStates = ((BeliefState) child.getState()).getNumberOfWorldStates();
+//                                connectorValueSum += numWorldStates * childEstimate;
+//                                sumOfChildrenCardinality += numWorldStates;
+//                            } else {
                                 assert (connectorValueSum <= connectorValueSum + childEstimate);
                                 connectorValueSum += childEstimate;
-                            }
+//                            }
                         }
 
                         double connectorValueAvg;
-                        if (MyNDPlanner.weighBeliefStatesByCardinality && node.getState() instanceof BeliefState) {
-                            connectorValueAvg = connectorValueSum / sumOfChildrenCardinality;
-                        } else {
-                            //                        	if (connectorValueSum == Double.POSITIVE_INFINITY) {
-                            //                        		System.out.println("1");
-                            //                        		assert false;
-                            //                        	}
-                            //                        	if (connectorValueSum == Double.MAX_VALUE) {
-                            //                        		System.out.println("2");
-                            //                        		assert false;
-                            //                        	}
-                            //                        	System.out.println("Connector value sum " + connectorValueSum);
+//                        if (MyNDPlanner.weighBeliefStatesByCardinality && node.getState() instanceof BeliefState) {
+//                            connectorValueAvg = connectorValueSum / sumOfChildrenCardinality;
+//                        } else {
                             connectorValueAvg = connectorValueSum / connector.getChildren().size();
-                        }
+//                        }
 
                         boolean useMax = false; // Experiments show that it seems to be preferable to average about child nodes.
                         if (useMax) {
-                            if (connector.getBaseCost() + connectorValueMax * DISCOUNT_FACTOR < node.getCostEstimate()) {
-                                node.setCostEstimate(connector.getBaseCost() + connectorValueMax * DISCOUNT_FACTOR);
+                            if (connector.getCost() + connectorValueMax * DISCOUNT_FACTOR < node.getCostEstimate()) {
+                                node.setCostEstimate(connector.getCost() + connectorValueMax * DISCOUNT_FACTOR);
                             }
                         }
                         else {
-                            if (connector.getBaseCost() + connectorValueAvg < node.getCostEstimate()) {
-                                node.setCostEstimate(connector.getBaseCost() + connectorValueAvg);
+                            if (connector.getCost() + connectorValueAvg < node.getCostEstimate()) {
+                                node.setCostEstimate(connector.getCost() + connectorValueAvg);
                             }
                         }
                     }

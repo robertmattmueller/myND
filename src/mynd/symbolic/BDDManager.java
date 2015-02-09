@@ -170,26 +170,26 @@ public class BDDManager {
             }
         }
         assert (disjunctionOverChoices != null || !explicitOp.observation.isEmpty());
-        SymbolicOperator result = new SymbolicOperator(operatorName, precondition, disjunctionOverChoices, explicitOp.observation, explicitOp.isAbstracted, explicitOp.isDeterminized(), explicitOp.getCost());
+        SymbolicOperator result = new SymbolicOperator(operatorName, precondition, disjunctionOverChoices, explicitOp.observation, explicitOp.isAbstracted, explicitOp.getCost());
         result.setAffectedVariables(explicitOp.getAffectedVariables());
 
         // Store mapping from symbolic op to explicit op. Determinized ops are not stored since they are not abstracted or
         // determinized again in future.
-        if (!result.isDeterminized()) {
-            if (operatorMapping.containsKey(result)) {
-                if (DEBUG) {
-                    System.out.println("result: already there.");
-                    explicitOp.dump();
-                    System.out.println("here:");
-                    operatorMapping.get(result).dump();
-                }
-                assert operatorMapping.get(result).equals(explicitOp);
-                // TODO somehow unnecessary to build this symbolic operator a second time... use another map? 
+
+        if (operatorMapping.containsKey(result)) {
+            if (DEBUG) {
+                System.out.println("result: already there.");
+                explicitOp.dump();
+                System.out.println("here:");
+                operatorMapping.get(result).dump();
             }
-            else {
-                operatorMapping.put(result, explicitOp);
-            }
+            assert operatorMapping.get(result).equals(explicitOp);
+            // TODO somehow unnecessary to build this symbolic operator a second time... use another map? 
         }
+        else {
+            operatorMapping.put(result, explicitOp);
+        }
+
         return result;
     }
 

@@ -1,6 +1,7 @@
 package mynd.search;
 
-import mynd.Global;
+import mynd.search.policy.Policy;
+import mynd.simulator.PlanSimulator;
 
 /**
  * An abstract search engine.
@@ -8,14 +9,14 @@ import mynd.Global;
  * @author Robert Mattmueller
  */
 public abstract class AbstractSearch {
-    
-    public enum Result {       
+
+    public enum Result {
         // existence of a winning strategy for the protagonist
         PROVEN,
-        
+
         //non-existence of a winning strategy for the protagonist
         DISPROVEN,
-        
+
         // indicating time-out
         TIMEOUT
     };
@@ -39,12 +40,12 @@ public abstract class AbstractSearch {
      * Search time-out.
      */
     long timeout = AbstractSearch.NO_TIMEOUT;
-    
+
     /**
      * Counter for node expansions.
      */
     public static int NODE_EXPANSIONS = 0;
-    
+
     /**
      * Start node of the search.
      */
@@ -53,32 +54,22 @@ public abstract class AbstractSearch {
     /**
      * Dump the plan in an arbitrary format.
      */
-    public abstract void dumpPlan();
+    public void dumpPlan() {
+        System.out.println(getPolicy());
+    }
 
-    /**
-     * Print a plan in the competition policy format, if one has been found.
-     */
-    public void getPlanAsPolicy() {
-    	assert (Global.problem.isFullObservable);
-    	System.err.println("Dump plan...");
-    	System.out.println(getExplicitStateActionTable().toStringPolicy());
-    	System.err.println("Done");
+    public void printPlan(String filename) {
+        getPolicy().printToFile(filename);
     }
-    
-    /**
-     * Print a plan, if one has been found.
-     */
-    public void getPlanAsDebugOutput() {
-    	System.err.println("Dump plan...");
-    	System.err.println(getExplicitStateActionTable().toString());
-    }
+
 
     /**
      * Return a plan in the form of an explicit state-action table.
      * 
-     * @return Explicit state action table representing the plan that was found.
+     * @return Explicit state action table representing the plan that was found
+     * 	       or null if no plan was found (so far).
      */
-    public abstract StateActionTable getExplicitStateActionTable();
+    public abstract Policy getPolicy();
 
     /**
      * Perform a complete run of the search algorithm.
@@ -96,9 +87,12 @@ public abstract class AbstractSearch {
      * 
      * @param timeout
      *            Time-out in milliseconds
+     * @throws Exception iff timeout is negative
      */
-    public void setTimeout(long timeout) {
-        assert timeout > 0;
+    public void setTimeout(long timeout) throws Exception {
+        if (timeout <= 0) {
+            throw new Exception("Negative timeout for planning is not allowed. Maybe preprocessing takes too much time or timeout has to be increased.");
+        }
         this.timeout = timeout;
     }
 
@@ -113,12 +107,26 @@ public abstract class AbstractSearch {
         }
         return System.currentTimeMillis() - starttime > timeout;
     }
-    
+
     /**
      * Print statistics about the search.
      *
      * @param simulatePlan Indicates if the plan should be simulated to compute costs.
      */
     public abstract void printStats(boolean simulatePlan);
-    
+
+    /**
+     * Simulate the resulting policy and compute expected costs. Simulation time is 
+     * measured.
+     */
+    protected void simulatePlan() {
+        if (getPolicy() != null) {
+            long simulatorTime = System.currentTimeMillis();
+            double planCost = PlanSimulator.performValueIteration(getPolicy());
+            long simulatorEndTime = System.currentTimeMillis();
+            System.out.println("Expected Plan Cost: " + planCost);
+            System.out.println("Plan simulator time: " + (simulatorEndTime - simulatorTime)/ 1000 + " seconds.");
+        }
+    }
+
 }

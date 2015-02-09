@@ -49,7 +49,6 @@ public class GraphvizWriter {
         List<AOStarNode> seenNodes = new LinkedList<AOStarNode>();
         List<Connector> seenConnectors = new LinkedList<Connector>();
         Queue<AOStarNode> queue = new LinkedList<AOStarNode>();
-        assert Global.problem.isFullObservable;
         queue.offer(search.stateNodeMap.get(Global.problem.getSingleInitialState().uniqueID));
 
         while (!queue.isEmpty()) {
@@ -88,11 +87,11 @@ public class GraphvizWriter {
                 buffer.append("fontcolor=\"white\", style=\"filled\", fillcolor=\"blue\", ");
             }
             else {
-                if (!node.isProven) {
-                    if (node.isDisproven && !node.isExpanded()) {
+                if (!node.isProven()) {
+                    if (node.isDisproven() && !node.isExpanded()) {
                         buffer.append("style=\"filled\", fillcolor=\"red\", ");
                     }
-                    else if ((node.isDisproven && node.isExpanded())) {
+                    else if ((node.isDisproven() && node.isExpanded())) {
                         buffer.append("style=\"filled,rounded\", fillcolor=\"red\", ");
                     }
                     else if (!node.isExpanded()) {
@@ -112,17 +111,19 @@ public class GraphvizWriter {
                 }
             }
             buffer.append("label=\"");
-            assert Global.problem.isFullObservable;
+            buffer.append("index: " + node.index + "\\n");
             buffer.append("cost estimate: " + node.costEstimate + "\\n");
-            for (int i = 0; i < ((ExplicitState) node.state).size - 1; i++) {
-                String tmp = Global.problem.propositionNames.get(i).get(((ExplicitState) node.state).variableValueAssignment.get(i));
-                if (! tmp.startsWith("(not"))
-                {
-                    buffer.append(tmp);
-                    buffer.append("\\n");
+            if (Global.problem.isFullObservable) {
+                for (int i = 0; i < ((ExplicitState) node.state).size - 1; i++) {
+                    String tmp = Global.problem.propositionNames.get(i).get(((ExplicitState) node.state).variableValueAssignment.get(i));
+                    if (! tmp.startsWith("(not"))
+                    {
+                        buffer.append(tmp);
+                        buffer.append("\\n");
+                    }
                 }
+                buffer.append(Global.problem.propositionNames.get(((ExplicitState) node.state).size - 1).get(((ExplicitState) node.state).variableValueAssignment.get(((ExplicitState) node.state).size - 1)));
             }
-            buffer.append(Global.problem.propositionNames.get(((ExplicitState) node.state).size - 1).get(((ExplicitState) node.state).variableValueAssignment.get(((ExplicitState) node.state).size - 1)));
             buffer.append("\" ]\n");
         }
         for (Connector connector : seenConnectors) {

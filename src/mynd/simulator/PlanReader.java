@@ -15,10 +15,11 @@ import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import mynd.Global;
+import mynd.Global.ExitCode;
 import mynd.explicit.ExplicitAxiomEvaluator;
 import mynd.explicit.ExplicitState;
 import mynd.parser.SasParser;
-import mynd.search.StateActionTable;
+import mynd.search.policy.Policy;
 import mynd.state.Operator;
 import mynd.util.Pair;
 
@@ -29,31 +30,33 @@ import mynd.util.Pair;
  *
  */
 public class PlanReader {
-	
-	ExplicitAxiomEvaluator axiomEvaluator = new ExplicitAxiomEvaluator();
+
+
+    ExplicitAxiomEvaluator axiomEvaluator = new ExplicitAxiomEvaluator();
 
     public static void main(String[] args) throws FileNotFoundException, IOException {
+        final PlanReader reader = new PlanReader();
         String sasFilename = args[0];
         String planFilename = args[1];
         new SasParser().parse(new FileInputStream(sasFilename));
         assert (Global.problem.isFullObservable);
+        reader.axiomEvaluator = new ExplicitAxiomEvaluator();
         //Global.problem.getSingleInitialState().uniqueID; TODO check this? was uniqueID();
-        
-        PlanReader reader = new PlanReader();
-        StateActionTable plan = reader.readPlan(planFilename);
+
+        System.out.println("Parsing " + planFilename);
+        Policy plan = reader.readPlan(planFilename);
 
         //System.out.println(plan);
-        double planCost = new PlanSimulator().performValueIteration(plan);
+        double planCost = PlanSimulator.performValueIteration(plan);
 
-        System.err.println("Plan cost (expected number of steps to goal): " + planCost);
-        System.out.println(plan.toStringPolicy());
-
+        System.out.println("Plan cost (expected number of steps to goal): " + planCost);
+        System.out.println(plan.toString());
     }
 
     public PlanReader() {}
 
     private int parseEntry(List<Pair<Integer, Integer>> propositionIndices, List<Operator> operators, String[] policy,
-            StateActionTable plan, int currentIndex) {
+            Policy plan, int currentIndex) {
         int numPreconditions = Integer.parseInt(policy[currentIndex]);
 
         List<Pair<Integer, Integer>> pairs = new ArrayList<Pair<Integer, Integer>>();
@@ -62,8 +65,7 @@ public class PlanReader {
             Pair<Integer, Integer> pair = propositionIndices.get(precond);
             if (pair != null) {
                 pairs.add(pair);
-            }
-            else {
+            } else {
                 // System.err.println("WARNING: Variable not found in SAS encoding. Maybe compiled away?");
             }
         }
@@ -90,7 +92,7 @@ public class PlanReader {
 
                 if (!propositionName.startsWith("(not ")) {
                     System.err.println("Ooops. Wrong value ...");
-                    System.exit(1);
+                    ExitCode.EXIT_CRITICAL_ERROR.exit();
                 }
             }
         }
@@ -99,9 +101,8 @@ public class PlanReader {
         Operator operator = operators.get(action);
 
         if (operator != null) {
-            plan.addEntry(new ExplicitState(values, axiomEvaluator), operator); // FIXME
-        }
-        else {
+            plan.addEntry(new ExplicitState(values, axiomEvaluator), operator);
+        } else {
             // System.err.println("WARNING: Operator not found in SAS encoding. Maybe compiled away?");
         }
 
@@ -109,11 +110,11 @@ public class PlanReader {
     }
 
     private void parsePolicy(List<Pair<Integer, Integer>> propositionIndices, List<Operator> operators,
-            String[] policy, StateActionTable plan) {
+            String[] policy, Policy plan) {
         int numEntries = Integer.parseInt(policy[1]);
         int currentIndex = 2;
         for (int i = 0; i < numEntries; i++) {
-            System.err.println("Parsing policy entry " + i + " of " + numEntries);
+            System.out.println("Parsing policy entry " + i + " of " + numEntries);
             int offset = parseEntry(propositionIndices, operators, policy, plan, currentIndex);
             currentIndex += offset;
         }
@@ -149,8 +150,8 @@ public class PlanReader {
         return lines;
     }
 
-    public StateActionTable readPlan(String filename) throws FileNotFoundException, IOException {
-        StateActionTable plan = new StateActionTable();
+    public Policy readPlan(String filename) throws FileNotFoundException, IOException {
+        Policy plan = new Policy();
         List<String> lines = readFile(filename);
         assert lines.size() == 5;
         assert lines.get(1).equals("%%");
@@ -205,6 +206,6 @@ public class PlanReader {
         }
         return result;
     }
-    
+
 
 }

@@ -1,9 +1,9 @@
 package mynd.search;
 
+import java.util.HashSet;
 import java.util.LinkedHashSet;
 import java.util.Set;
 
-import mynd.heuristic.ZeroHeuristic;
 import mynd.state.State;
 
 
@@ -17,12 +17,12 @@ public class AOStarNode extends AbstractNode implements Comparable<AOStarNode> {
     /**
      * Heuristic value of this node
      */
-    int            heuristic;
+    int heuristic;
 
     /**
      * Cost estimate of this node
      */
-    double         costEstimate;
+    double costEstimate;
 
     /**
      * Weak goal distance of this node.
@@ -32,17 +32,22 @@ public class AOStarNode extends AbstractNode implements Comparable<AOStarNode> {
     /**
      * Incoming connectors
      */
-    Set<Connector> incomingConnectors;
+    Set<Connector> incomingConnectors = new LinkedHashSet<Connector>();
 
     /**
      * Outgoing connectors
      */
-    Set<Connector> outgoingConnectors;
+    Set<Connector> outgoingConnectors = new LinkedHashSet<Connector>();;
 
     /**
      * The outgoing connector currently marked.
      */
-    Connector      markedConnector = null;
+    Connector markedConnector = null;
+    
+    /**
+     * Set of all ancestor nodes.
+     */
+    Set<AOStarNode> ancestorNodes = new HashSet<AOStarNode>();
 
     /**
      * Creates a new node for a given state.
@@ -52,31 +57,29 @@ public class AOStarNode extends AbstractNode implements Comparable<AOStarNode> {
      * @param manager
      *            The AOStar search instance controlling this node
      */
-    public AOStarNode(State state, AOStarSearch searchManager, int depth) {
+    public AOStarNode(State state, HeuristicSearch searchManager, int depth) {
         super(state, depth);
-        if (searchManager.estimator == null) {
-            searchManager.estimator = new ZeroHeuristic();
-        }
-        heuristic = (int) searchManager.estimator.getHeuristic(state);
+        assert searchManager.heuristic != null;
+        heuristic = (int) searchManager.heuristic.getHeuristic(state);
         costEstimate = heuristic;
-        isProven = state.isGoalState();
-        isGoalNode = state.isGoalState();
-        if (isGoalNode) {
+        if (state.isGoalState()) {
+            isGoalNode = true;
+            setProven();
             weakGoalDistance = 0;
         }
         else {
             weakGoalDistance = Double.POSITIVE_INFINITY;
         }
-        // FIXME: Assumption that dead ends are reliable
-        isDisproven = costEstimate == AbstractNode.DISPROVEN;
-
-        incomingConnectors = new LinkedHashSet<Connector>();
-        outgoingConnectors = new LinkedHashSet<Connector>();
+        // TODO: Assumption that dead ends are reliable
+        if (costEstimate == AbstractNode.DISPROVEN) {
+            setDisproven();
+        }
+        
     }
 
     @Override
     public String toString() {
-        return state.toString() + ":" + costEstimate + " (depth: " + getDepth() + ", h-value: " + heuristic + ", index: " + index + ")";
+        return state.toString() + ":" + costEstimate + " (depth: " + getDepth() + ", h-value: " + heuristic + ", cost estimate: " + costEstimate + ", index: " + index + ")";
     }
 
     public int getHeuristic() {
@@ -117,5 +120,11 @@ public class AOStarNode extends AbstractNode implements Comparable<AOStarNode> {
      */
     public Set<Connector> getOutgoingConnectors() {
         return outgoingConnectors;
+    }
+    
+    @Override
+    public void setDisproven() {
+        super.setDisproven();
+        costEstimate = DISPROVEN;
     }
 }

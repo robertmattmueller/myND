@@ -18,17 +18,20 @@ import java.util.Queue;
 import java.util.Set;
 
 import mynd.Global;
-import mynd.MyNDPlanner;
+import mynd.Global.ExitCode;
+import mynd.MyNDPlanner.Algorithm;
+import mynd.heuristic.Heuristic;
+import mynd.search.policy.Policy;
 import mynd.simulator.PlanSimulator;
 import mynd.state.Operator;
 import mynd.state.State;
-import mynd.util.AOStarNodeComparator;
+import mynd.util.NodeComparator;
 
 
 /**
  * An AO* search engine working similarly as described in Nilsson (1980).
  * Aggregation of estimates is done by minimizing over OR choices and maximizing
- * over AND choices. // TODO Implemented as described?
+ * over AND choices.
  * 
  * @author Robert Mattmueller
  * @author Manuela Ortlieb
@@ -36,36 +39,21 @@ import mynd.util.AOStarNodeComparator;
 public class AOStarSearch extends HeuristicSearch {
 
     /**
-     * Expansion criteria.
+     * Selection function to choose non-expanded nodes when tracing 
+     * the current best partial solution graph.
      */
-    public enum ExpansionRules {
-        MIN_H, MAX_H, MIN_DEPTH, MAX_DEPTH, OLDEST, NEWEST, RANDOM
+    public enum SelectionFunction {
+        MINH, MAXH, OLDEST, NEWEST
+    }; 
+    
+    /**
+     * How to tie break between unexpanded nodes if the selection
+     * function returns the same value for them.
+     *
+     */
+    public enum TieBreaker {
+        OLDEST, NEWEST
     };
-
-    /**
-     * Expansion strategies.
-     */
-    public enum ExpansionStrategy {
-        LINEAR, ALTERNATE
-    };
-
-    /**
-     * If no unexpanded node could be traced in partial best solution, which
-     * expansion strategy should be used. Linear means that always
-     * maxNumberOfNodesToExpandInOneStep nodes are selected by the same
-     * criteria. Alternate means that criteria are alternated.
-     */
-    public static ExpansionStrategy expansionStrategy;
-
-    /**
-     * Give criteria how unexpanded nodes should be selected from AND/OR-graph.
-     */
-    public static ExpansionRules[][] expansionRules;
-
-    /**
-     * Set this to true if you want to track the depth of a node.
-     */
-    public static boolean depthIsRelevant = false;
 
     /**
      * Epsilon (for double comparison)
@@ -91,30 +79,14 @@ public class AOStarSearch extends HeuristicSearch {
     private static final int UPDATED_COST_ESTIMATE = 2;
 
     /**
-     * Maximal number of nodes which is expanded in one Iteration. // FIXME: Is
-     * not used correctly!!!
+     * Contains all operators which are only sensing, not causative.
      */
-    public static int maxNumberOfNodesToExpandInOneStep = 1;
+    protected List<Operator> sensingOps = new ArrayList<Operator>();
 
     /**
-     * If no node to expand is found in a best partial solution graph, then
-     * expand rateOfNodesToExpandInOneStep of the unexpanded nodes (but not more
-     * than maxNumberOfNodesToExpandInOneStep).
+     * Contains all operators, which are causative.
      */
-    public static double rateOfNodesToExpandInOneStep = 1.0;
-
-    /**
-     * Prefer sensing operator in POND-planning. Apply exactly one sensing
-     * operator, if one is applicable and leads to a splitting.
-     */
-    public static boolean sensingFirst = false;
-
-    /**
-     * As soon as a proven connector is found propagate it.
-     * Setting to false leads to much slower AO*, but to better, e.g. cheaper
-     * plans.
-     */
-    public static boolean fastUpdate = true;
+    protected List<Operator> causativeOps = new ArrayList<Operator>();
 
     /**
      * Only apply one sensing op, which causes a splitting.
@@ -122,56 +94,40 @@ public class AOStarSearch extends HeuristicSearch {
     public static boolean restrictSensingOps = false;
 
     /**
-     * Choose first sensing op, when using "restrictSensingOps".
-     */
-    public static boolean useFirstSensingOp = false;
-
-    /**
-     * Collect all operators which are only sensing, not causative.
-     */
-    private List<Operator> sensingOps = new ArrayList<Operator>();
-
-    /**
-     * Collect all operators, which are causative.
-     */
-    private List<Operator> causativeOps = new ArrayList<Operator>();
-
-    /**
      * Mapping from unique hash value of world states to nodes in AND/OR graph
      * representing them.
      */
     protected Map<BigInteger, AOStarNode> stateNodeMap = new LinkedHashMap<BigInteger, AOStarNode>(
-            10000);
+            100000);
+
+
+    private AOStarNode nodeToStartTracing;
+    
+    private PriorityQueue<AOStarNode> unexpandedNodesFromTracing = new PriorityQueue<AOStarNode>(100, new NodeComparator());
 
     /**
-     * Queues of all created nodes still awaiting expansion.
+     * Mapping from states to actions, aka. plan.
      */
-    protected ArrayList<PriorityQueue<AOStarNode>> unexpandedNodes;
+    private Policy policy;
 
     /**
-     * Does anything changed during update after an expansion.
+     * Counter for number of dumped plans.
      */
-    protected boolean nothingChanged = false; // Only used for original
-    // AO*-algorithm and not in
-    // LAO*.
-    // TODO [issue #26] support LAO*.
-
-    /**
-     * If nothing changed while updating after an expansion, tracing could be
-     * improved by starting with lastExpandedNode.
-     */
-    //protected AOStarNode lastExpandedNode = null; // Only used for original
-    // AO*-algorithm and not in
-    // LAO*.
-    // TODO [issue #26] support LAO*.
-
-    private StateActionTable explicitStateActionTable;
-
-    private int alternatingIndex = 0;
-
     private int dumpingCounterPlan = 0;
 
+    /**
+     * Counter for number of dumped states spaces.
+     */
     private int dumpingCounterStateSpace = 0;
+    
+    /**
+     * Counter for number of traced nodes.
+     */
+    private int numberOfTracedNodes = 0;
+
+    public static boolean sensingFirst = false;
+
+    public static Integer maxNumberOfNodesToExpandInOneStep = 1;
 
     /**
      * Set DEBUG true for more outputs.
@@ -179,33 +135,21 @@ public class AOStarSearch extends HeuristicSearch {
     public static boolean DEBUG = false;
 
     /**
+     * Set DUMP true to dump the state space and partial plan after each iteration.
+     */
+    public static boolean DUMP = false;
+
+
+    /**
      * Create an AO* search manager using a given heuristic estimator.
      * 
      * @param problem
      *            The problem to be solved
      */
-    public AOStarSearch() {
-        // No expansion rules were set by options. Use following as default:
-        if (expansionRules == null) {
-            assert expansionStrategy == null;
-            expansionStrategy = ExpansionStrategy.ALTERNATE;
-            expansionRules = new ExpansionRules[2][];
-            ExpansionRules alternative1[] = new ExpansionRules[2];
-            alternative1[0] = ExpansionRules.MIN_H;
-            alternative1[1] = ExpansionRules.OLDEST;
-            ExpansionRules alternative2[] = new ExpansionRules[1];
-            alternative2[0] = ExpansionRules.OLDEST;
-            expansionRules[0] = alternative1;
-            expansionRules[1] = alternative2;
-        }
-        unexpandedNodes = new ArrayList<PriorityQueue<AOStarNode>>(
-                expansionRules.length);
-        for (int i = 0; i < expansionRules.length; i++) {
-            unexpandedNodes.add(new PriorityQueue<AOStarNode>(10000,
-                    new AOStarNodeComparator(i)));
-        }
+    public AOStarSearch(Heuristic heuristic) {
+        super(heuristic);
         if (!Global.problem.isFullObservable) {
-            // Collect all operators which are sensing and are not causative.
+            // Collect all operators which are sensing but not causative.
             for (Operator op : Global.problem.getOperators()) {
                 if (op.isSensing && !op.isCausative) {
                     sensingOps.add(op);
@@ -218,77 +162,23 @@ public class AOStarSearch extends HeuristicSearch {
 
     /**
      * Perform one iteration of the AO* algorithm, i.e. choice of nodes to
-     * expand, expansion, and (recursive) update. Nodes of equal quality in the
-     * subgraph induced by the marked connectors are expanded simultaneously. If
-     * the subgraph induced by the marked connectors does not include any
-     * unexpanded nodes which are not proven/disproven yet, all unexpanded nodes
-     * not yet proven/disproven (outside the induced subgraph) are considered
-     * candidates for expansion.
+     * expand, expansion, and (recursive) update. 
      */
     @Override
     public void doIteration() {
-        if (DEBUG) {
-            System.out.println("New iteration: Unexpanded nodes:");
-            System.out.println(unexpandedNodes.get(0));
-            if (Global.problem.isFullObservable) {
-                dumpStateSpace();
-                dumpPartialSolution();
-            }
+        List<AOStarNode> nodesToExpand = nodesToExpand();
+        if (timeout()) {
+            return;
         }
-        if (unexpandedNodes.get(0).isEmpty()) {
-            // There is no unexpanded node in the graph.
-            initialNode.isDisproven = true;
-        } else {
-            AOStarNode[] nodesToExpand = nodesToExpand();
+        assert nodesToExpand != null;
+        for (AOStarNode node : nodesToExpand) {
+            expand(node);
             if (timeout()) {
                 return;
             }
-            assert nodesToExpand != null;
-            for (AOStarNode node : nodesToExpand) {
-                expand(node);
-                if (timeout()) {
-                    return;
-                }
-            }
-            assert nodesToExpand.length > 0;
-
-            updateUntilFixpoint(nodesToExpand);
         }
-    }
-
-    @Override
-    public void dumpPlan() {
-        if (Global.problem.isFullObservable) {
-            System.out.println(getExplicitStateActionTable().toStringPolicy());
-            //printPolicyToFile();
-            if (MyNDPlanner.runID == -1 && getExplicitStateActionTable().getNumberOfEntries() <= 120) {
-                // Dump DOT representation of the plan if the planner runs locally and there are at most 100 entries.
-                dumpPartialSolution("plan_final_" + MyNDPlanner.getNameOfProblemInstance());
-            }
-            //getPlanAsDebugOutput();
-        } else {
-            getPlanAsDebugOutput();
-        }
-    }
-
-    public void printPolicyToFile() {
-        String id = "";
-        if (MyNDPlanner.runID > -1) {
-            id = Integer.toString(MyNDPlanner.runID) + "_";
-        }
-        File plan = new File(id + MyNDPlanner.getNameOfProblemInstance() + ".fond_plan");
-        if (Global.problem.isFullObservable) {
-            try {
-                FileWriter writer = new FileWriter(plan);
-                writer.write(getExplicitStateActionTable().toStringPolicy());
-                writer.flush();
-                writer.close();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-        } else {
-            //getPlanAsDebugOutput();
-        }
+        assert !nodesToExpand.isEmpty();
+        updateUntilFixpoint(nodesToExpand);
     }
 
     public void dumpStateSpace() {
@@ -334,28 +224,18 @@ public class AOStarSearch extends HeuristicSearch {
             System.out.println("Node " + node + " is expaneded now!");
         }
         node.setExpanded();
-        for (PriorityQueue<AOStarNode> queue : unexpandedNodes) {
-            queue.remove(node); // O(n) - TODO: improve this!
-        }
-        if (!(node.isProven || node.isDisproven)) {
+        if (!node.isDecided()) {
             List<Operator> applicableOps;
             if (restrictSensingOps) {
                 assert (!Global.problem.isFullObservable);
+                
                 // We apply only one sensing op to reduce branching.
                 List<Operator> applicableSensingOps = node.state
                         .getApplicableOps(sensingOps);
                 if (!applicableSensingOps.isEmpty()) {
-                    if (useFirstSensingOp) {
-                        // We use the first sensing op.
-                        applicableOps = new LinkedList<Operator>(
-                                Arrays.asList(applicableSensingOps.get(0)));
-                    } else {
-                        // We use a random sensing op.
-                        int random = Global.generator
-                                .nextInt(applicableSensingOps.size());
-                        applicableOps = new LinkedList<Operator>(
-                                Arrays.asList(applicableSensingOps.get(random)));
-                    }
+                    // We use the first sensing op.
+                    applicableOps = new LinkedList<Operator>(
+                            Arrays.asList(applicableSensingOps.get(0)));
                     if (!sensingFirst) {
                         // We also apply causative ops.
                         applicableOps.addAll(node.state
@@ -369,51 +249,55 @@ public class AOStarSearch extends HeuristicSearch {
                 applicableOps = node.state.getApplicableOps(Global.problem
                         .getOperators());
             }
-            boolean hasSuccessor = false; // Successor which is different from
-            // node.
+            boolean hasSuccessor = false; // which is different from node (no self-loop)
             for (Operator op : applicableOps) {
                 Set<State> successorStates = node.state.apply(op);
-                if (successorStates.isEmpty()) {
-                    continue; // FIXME: ?
-                }
+                assert !successorStates.isEmpty();
                 Set<AOStarNode> children = new LinkedHashSet<AOStarNode>();
+                Set<AOStarNode> ancestors = new HashSet<AOStarNode>((int) (node.ancestorNodes.size() / 0.75 + 1) + 1);
+                ancestors.addAll(node.ancestorNodes);
+                ancestors.add(node);
                 for (State successor : successorStates) {
-                    AOStarNode newNode = lookupAndInsert(successor,
-                            node.getDepth() + 1);
-                    if (newNode != node) {
-                        hasSuccessor = true;
-                    }
+                    AOStarNode newNode = lookupAndInsert(successor);
+                    if (Global.algorithm == Algorithm.AOSTAR) { // TODO
+                        // In case of AO* search, we only add a connector 
+                        // if it does not lead to a cycle.
+                        if (ancestors.contains(newNode)) {
+                            children.clear();
+                            break;
+                        }
+                    } 
                     children.add(newNode);
                 }
-                assert (!children.isEmpty());
-                new Connector(node, children, op);
+                if (!children.isEmpty()) {
+                    new Connector(node, children, op);
+                    if (!(children.size() == 1 && children.iterator().next() == node)) {
+                        hasSuccessor = true;
+                    }
+                }
             }
             if (!hasSuccessor) {
-                node.isDisproven = true; // Dead end.
+                node.setDisproven(); // Dead end.
             }
-            // FIXME what if last expanded node was a dead end?
-            //lastExpandedNode = node; // only used for original AO* algorithm
             NODE_EXPANSIONS++;
         } else {
-            assert false;
+            assert false : "Node to expand is already decided.";
         }
     }
 
-    private Set<AOStarNode> fillStateActionTable(StateActionTable table,
-            AOStarNode node, Set<AOStarNode> seen) {
+    /**
+     * Fill the state action table by following marked 
+     * connectors in the search graph.
+     */
+    private Set<AOStarNode> fillStateActionTable(AOStarNode node, Set<AOStarNode> seen) {
         if (!node.state.isGoalState()) {
-            //System.out.println("node: " + node);
-            //System.out.println(node.state.equals(Global.problem.getSingleInitialState()));
+            assert node.markedConnector != null;
             assert node.markedConnector.operator != null;
-            //			if (Global.problem.getOriginalOperatorMap().get(node.markedConnector.operator.getName()) == null) {
-            //				System.out.println(node.markedConnector.operator.getName());
-            //				assert false;
-            //			}
-            table.addEntry(node.state, node.markedConnector.operator);
+            policy.addEntry(node.state, node.markedConnector.operator);
             seen.add(node);
             for (AOStarNode child : node.markedConnector.children) {
                 if (!seen.contains(child)) {
-                    seen = fillStateActionTable(table, child, seen);
+                    seen = fillStateActionTable(child, seen);
                 }
             }
         }
@@ -421,20 +305,35 @@ public class AOStarSearch extends HeuristicSearch {
     }
 
     /**
-     * Return a plan in the form of an explicit state-action table. Don't call
-     * this during search (!).
+     * Return a plan in the form of an explicit state-action table.
      * 
-     * @return Explicit state action table representing the plan that was found.
+     * @return policy or null iff no plan was found
      */
     @Override
-    public StateActionTable getExplicitStateActionTable() {
-        if (explicitStateActionTable == null) {
-            explicitStateActionTable = new StateActionTable();
-            Set<AOStarNode> seen = new LinkedHashSet<AOStarNode>();
-            fillStateActionTable(explicitStateActionTable,
-                    (AOStarNode) initialNode, seen);
+    public Policy getPolicy() {
+        if (initialNode.isDisproven()) {
+            System.out.println("Planning task is unsolvable. There is no policy.");
+            return null;
         }
-        return explicitStateActionTable;
+        else if (!initialNode.isProven()) {
+            System.out.println("Planning task is not solved so far. No policy so far.");
+            return null;
+        }
+        else {
+            if (policy == null) {
+                policy = new Policy();
+                Set<AOStarNode> seen = new LinkedHashSet<AOStarNode>();
+                fillStateActionTable((AOStarNode) initialNode, seen);
+            }
+            return policy;
+        }
+    }
+
+    /**
+     * Delete state action table.
+     */
+    public void deleteStateActionTable() {
+        policy = null;
     }
 
     /**
@@ -448,41 +347,21 @@ public class AOStarSearch extends HeuristicSearch {
      * @return The unique node corresponding to the given state, either newly
      *         created or old.
      */
-    @Override
-    public AOStarNode lookupAndInsert(State state, int depth) {
+    public AOStarNode lookupAndInsert(State state) {
         AOStarNode node;
         if (!stateNodeMap.containsKey(state.uniqueID)) {
             // This is a new node.
-            node = new AOStarNode(state, this, depth);
+            node = new AOStarNode(state, this, 0);
             stateNodeMap.put(state.uniqueID, node);
-            if (node.isProven || node.isDisproven) {
+            if (node.isDecided()) {
                 node.setExpanded();
-            } else {
-                for (PriorityQueue<AOStarNode> queue : unexpandedNodes) {
-                    queue.add(node);
-                }
             }
             if (DEBUG) {
                 System.out.println("New node " + node);
             }
         } else {
             node = stateNodeMap.get(state.uniqueID);
-            if (!state.equals(node.state)) {
-                assert false;
-            }
-            if (depthIsRelevant) {
-                // depth = shortest path from root to the node
-                if (node.getDepth() > depth) {
-                    node.setDepth(depth);
-                    if (!node.isExpanded()) { // FIXME: Avoid this if depth is not
-                        // used.
-                        for (PriorityQueue<AOStarNode> queue : unexpandedNodes) {
-                            queue.remove(node); // O(n)
-                            queue.add(node);
-                        }
-                    }
-                }
-            }
+            assert state.equals(node.state);
             if (DEBUG) {
                 System.out.println("Known node " + node);
             }
@@ -495,55 +374,28 @@ public class AOStarSearch extends HeuristicSearch {
      * 
      * @return A set of nodes which will be expanded in the next step.
      */
-    private AOStarNode[] nodesToExpand() {
-        AOStarNode initial;
-        // More efficient for AO*-algorithm. But only if exactly one node is
-        // expanded. Not used for LAO*.
-        // if (nothingChanged) {
-        // initial = lastExpandedNode;
-        // System.err.println("Nothing changed!");
-        // }
-        // else {
-        initial = (AOStarNode) initialNode;
-        // }
-        PriorityQueue<AOStarNode> nodesToExpand = traceMarkedConnectors(initial);
+    protected List<AOStarNode> nodesToExpand() {
+        PriorityQueue<AOStarNode> nodesToExpand = traceMarkedConnectors(nodeToStartTracing);
         if (timeout()) {
             return null;
         }
-        AOStarNode[] bestNodes = null;
-        if (!nodesToExpand.isEmpty()) { // Case 1: There is an unexpanded node
-            // in current best solution graph.
-            if (DEBUG) {
-                System.out
-                .println("There is at least one unexpaneded node in current best solution graph.");
-            }
-            bestNodes = new AOStarNode[nodesToExpand.size()];
-            int num = nodesToExpand.size();
-            for (int i = 0; i < num; i++) {
-                bestNodes[i] = nodesToExpand.poll();
-            }
-        } else { // Case 2: Choose maxNumberOfNodesToExpand other unexpanded
-            // node from the AND/OR-graph.
-            // System.err.println("Case 2: Tracing was not successful!");
-            PriorityQueue<AOStarNode> unexpanded = unexpandedNodes
-                    .get(alternatingIndex);
-            int size = 0;
-            if (rateOfNodesToExpandInOneStep == 1.0) {
-                size = Math.min(maxNumberOfNodesToExpandInOneStep,
-                        unexpanded.size());
-            } else {
-                if (unexpanded.size() > 0) {
-                    size = (int) (rateOfNodesToExpandInOneStep * unexpanded
-                            .size()) + 1;
-                }
-            }
-            bestNodes = new AOStarNode[size];
-            for (int i = 0; i < size; i++) {
-                bestNodes[i] = unexpanded.poll();
-            }
-            alternatingIndex = (alternatingIndex + 1) % unexpandedNodes.size();
+        int num;
+        boolean expandAllNodes = false;
+        if (expandAllNodes) {
+            num = nodesToExpand.size();
         }
-        return bestNodes;
+        else {
+            num = Math.min(nodesToExpand.size(), maxNumberOfNodesToExpandInOneStep);
+        }
+        List<AOStarNode> result = new ArrayList<AOStarNode>(num);
+        for (int i = 0; i < num; i++) {
+            result.add(i, nodesToExpand.poll());
+        }
+        
+        // Used in the case that complete tracing is not necessary in the next iteration
+        // (meaning that during update nothing changed).
+        unexpandedNodesFromTracing = nodesToExpand; 
+        return result;
     }
 
     @Override
@@ -567,72 +419,64 @@ public class AOStarSearch extends HeuristicSearch {
      * all unexpanded nodes encountered. Prune trace at proven and disproven
      * nodes.
      * 
-     * @param initial
-     *            initial node to start from
+     * @param initial node to start from
      * @return The set of all unexpanded nodes in the partial solution graph
      *         induced by the marked connectors which are neither proven nor
-     *         disproven sorted by decreasing h-Values. // TODO remove sorting?
+     *         disproven sorted by decreasing h-Values.
      */
     protected PriorityQueue<AOStarNode> traceMarkedConnectors(AOStarNode initial) {
+        if (timeout()) {
+            return null;
+        }
         if (DEBUG) {
             System.out.println();
             System.out.println("Tracing...");
         }
-        PriorityQueue<AOStarNode> result = new PriorityQueue<AOStarNode>();
-        Set<AOStarNode> seen = new HashSet<AOStarNode>();
+        boolean improveTracing = true;
+        if (!improveTracing) {
+            unexpandedNodesFromTracing.clear();
+            initial = (AOStarNode) initialNode;
+        }
+        PriorityQueue<AOStarNode> result = unexpandedNodesFromTracing;
+        Set<AOStarNode> seen = new HashSet<AOStarNode>(unexpandedNodesFromTracing);
         Queue<AOStarNode> queue = new LinkedList<AOStarNode>();
+        if (DEBUG) {
+            System.out.println("Start node: " + nodeToStartTracing);
+        }
         queue.offer(initial);
 
         while (!queue.isEmpty()) {
+            numberOfTracedNodes++;
             if (timeout()) {
                 return null;
             }
-
             AOStarNode next = queue.poll();
             seen.add(next);
-
-            if (!next.isProven && !next.isDisproven) {
+            if (!next.isDecided()) {
                 if (!next.isExpanded()) {
                     if (DEBUG) {
                         System.out.println("Node " + next
                                 + " is added to result... (not expanded).");
                     }
                     result.add(next);
-                } else {
-                    if (next.markedConnector != null) {
-                        if (DEBUG) {
-                            System.out
-                            .println("Node "
-                                    + next
-                                    + " has a marked connector. Add children of marked connector to queue.");
-                        }
-                        for (AOStarNode child : next.markedConnector.children) {
-                            if (!seen.contains(child) && !queue.contains(child)) {
-                                queue.offer(child);
-                            }
-                        }
+                } 
+                else {
+                    assert next.markedConnector != null : "Strange case where no connector is marked while tracing...";
+                    if (DEBUG) {
+                        System.out
+                        .println("Node "
+                                + next.index + " " + next
+                                + " has a marked connector. Add children of marked connector to queue.");
                     }
-                    // TODO check this!
-                    else {
-                        System.err
-                        .println("Strange case where no connector is marked while tracing...");
-                        assert false;
-                        // if (DEBUG) {
-                        // System.out.println("Node " + next +
-                        // " has no marked connector. Add all children to queue.");
-                        // }
-                        // for (Connector connector : next.outgoingConnectors) {
-                        // for (AOStarNode child : connector.children) {
-                        // if (!seen.contains(child) && !queue.contains(child))
-                        // {
-                        // queue.offer(child);
-                        // }
-                        // }
-                        // }
+                    for (AOStarNode child : next.markedConnector.children) {
+                        if (!seen.contains(child) && !queue.contains(child)) {
+                            queue.offer(child);
+                        }
                     }
                 }
             }
         }
+        nodeToStartTracing = (AOStarNode) initialNode; // Reset.
         return result;
     }
 
@@ -654,17 +498,17 @@ public class AOStarSearch extends HeuristicSearch {
         if (DEBUG) {
             System.out.println("\nUpdate node... " + node);
         }
-        if (node.isProven || node.isDisproven) {
+        if (node.isDecided()) {
             new Exception("Error: Must not call update(node) on nodes already decided.").printStackTrace();
-            System.exit(20);
+            ExitCode.EXIT_CRITICAL_ERROR.exit();
         }
-        // Note: Only used if fastUpdate == true.
         // Use first proven connector and break. Else
         // minimize among all proven connectors.
         boolean useFirstProvenConnector = false;
-        
-        if (node.markedConnector != null && node.markedConnector.isProven() && fastUpdate) {
-            node.isProven = true;
+
+        // 1. Node has a marked proven connector
+        if (node.markedConnector != null && node.markedConnector.isProven()) {
+            node.setProven();
             node.costEstimate = node.markedConnector.getMaxChildEstimate() + node.markedConnector.baseCost;
             if (!useFirstProvenConnector) {
                 Connector oldMarkedConnector = node.markedConnector;
@@ -680,7 +524,8 @@ public class AOStarSearch extends HeuristicSearch {
             }
             return AOStarSearch.UPDATED_PROOF_STATUS;
         }
-        
+
+        // 2. Node has no marked proven connector
         Connector oldMarkedConnector = node.markedConnector;
         double oldCostEstimate = node.costEstimate; // initially this is the h-value.
         if (node.markedConnector == null) {
@@ -689,7 +534,7 @@ public class AOStarSearch extends HeuristicSearch {
         else {
             node.costEstimate = node.markedConnector.getMaxChildEstimate() + node.markedConnector.baseCost;
         }
-        
+
         boolean allConnectorsDisproven = true;
         assert node.outgoingConnectors.size() > 0;
         // Find the cheapest outgoing (maybe proven) connector
@@ -698,11 +543,11 @@ public class AOStarSearch extends HeuristicSearch {
                 allConnectorsDisproven = false;
             }
             if (out != oldMarkedConnector) {
-                if (out.isProven() && fastUpdate) {
-                    if (!node.isProven) { // first proven connector we found
+                if (out.isProven()) {
+                    if (!node.isProven()) { // first proven connector we found
                         node.markedConnector = out;
                         node.costEstimate = out.getMaxChildEstimate() + out.baseCost;
-                        node.isProven = true;
+                        node.setProven();
                         if (useFirstProvenConnector) {
                             return UPDATED_PROOF_STATUS;
                         }
@@ -715,19 +560,21 @@ public class AOStarSearch extends HeuristicSearch {
                     }
                 }
                 else {
-                    if (out.getMaxChildEstimate() + out.baseCost < node.costEstimate) {
-                        node.markedConnector = out;
-                        node.costEstimate = out.getMaxChildEstimate() + out.baseCost;
+                    if (!node.isProven()) {
+                        if (out.getMaxChildEstimate() + out.baseCost < node.costEstimate) {
+                            node.markedConnector = out;
+                            node.costEstimate = out.getMaxChildEstimate() + out.baseCost;
+                        }
                     }
                 }
             }
         }
         if (allConnectorsDisproven) {
-            node.isDisproven = true;
+            node.setDisproven();
             node.markedConnector = null;
         }
-        if (node.isProven || node.isDisproven) {
-            assert !node.isProven || node.markedConnector != null;
+        if (node.isProven() || node.isDisproven()) {
+            assert !node.isProven() || node.markedConnector != null;
             return UPDATED_PROOF_STATUS;
         }
         else if (Math.abs(node.costEstimate - oldCostEstimate) < AOStarSearch.EPSILON) {
@@ -742,20 +589,14 @@ public class AOStarSearch extends HeuristicSearch {
 
     /**
      * Update nodes by propagating cost estimates and proof/disproof information
-     * backward through the game graph.
+     * backward through the graph.
      * 
      * @param nodes
      *            Nodes to start the update with
      */
-    protected void updateUntilFixpoint(AOStarNode[] nodes) {
-        Queue<AOStarNode> queue = new LinkedList<AOStarNode>();
+    protected void updateUntilFixpoint(List<AOStarNode> nodes) {
+        Queue<AOStarNode> queue = new LinkedList<AOStarNode>(nodes);
         Set<AOStarNode> seen = new HashSet<AOStarNode>();
-        
-        // Set of nodes with changes of marked connectors during this update process.
-        Set<AOStarNode> updated = new HashSet<AOStarNode>();
-        for (AOStarNode node : nodes) {
-            queue.add(node);
-        }
         while (!queue.isEmpty()) {
             if (timeout()) {
                 return;
@@ -763,59 +604,44 @@ public class AOStarSearch extends HeuristicSearch {
             AOStarNode node = queue.poll();
             seen.add(node);
             double oldCostEstimate = node.costEstimate;
-            Connector oldMarkedConnector = node.markedConnector;
+            
             int updateEffect;
-            if (node.isDisproven) {
+            if (node.isDisproven()) {
                 updateEffect = AOStarSearch.UPDATED_PROOF_STATUS;
             } else {
                 updateEffect = update(node);
-            }
-            if (node.markedConnector != oldMarkedConnector) {
-                updated.add(node);
             }
             if (DEBUG) {
                 System.out.println("Update state: " + updateEffect);
             }
 
-            switch (updateEffect) {
-            case AOStarSearch.UPDATED_PROOF_STATUS:
+            if (updateEffect != UPDATED_NOTHING) {
                 for (Connector connector : node.incomingConnectors) {
                     AOStarNode parent = connector.parent;
+                    
+                    // Non-marked connector nodes get not updated unless the cost estimate is decreasing.
                     if (connector != parent.markedConnector && !connector.isProven()) {
                         if (node.costEstimate >= oldCostEstimate) {
                             continue;
                         }
                     }
-                    if (!parent.isProven && !parent.isDisproven && !queue.contains(parent)) {
+                    // Marked connector parent is added to the queue unless it it already decided.
+                    if (!parent.isDecided() && !queue.contains(parent)) {
+                        // Note: We have no closed list here because the graph is by construction acyclic.
                         queue.offer(parent);
                     }
                 }
-                break;
-            case AOStarSearch.UPDATED_COST_ESTIMATE:
-                for (Connector connector : node.incomingConnectors) {
-                    AOStarNode parent = connector.parent;
-                    if (connector != parent.markedConnector) {
-                        // If this connector is not marked, there is an other
-                        // connector marked since it is proven or cheaper.
-                        if (node.costEstimate >= oldCostEstimate) {
-                            continue;
-                        }
-                        // Else: Node became cheaper. Update parent.
-                    }
-
-                    // Cost estimates of marked parents are only updated one time.
-                    if (!parent.isProven && !parent.isDisproven && !seen.contains(parent) && !queue.contains(parent)) {
-                        queue.offer(parent);
-                    }
-                }
-                break;
-            case AOStarSearch.UPDATED_NOTHING:
-                break;
-            default:
-                assert false;
-                break;
             }
         }
+        if (seen.size() == 1) {
+            // In this case there was nothing updated in the graph.
+            nodeToStartTracing = seen.iterator().next();
+            //System.out.println("Update status: nothing changed.");
+        }
+        else {
+            unexpandedNodesFromTracing.clear(); // Reset.
+        }
+        
     }
 
     /**
@@ -826,25 +652,25 @@ public class AOStarSearch extends HeuristicSearch {
     public void printStats(boolean simulatePlan) {
         int proven = 0;
         for (AOStarNode node : stateNodeMap.values()) {
-            if (node.isProven) {
+            if (node.isProven()) {
                 ++proven;
             }
         }
         System.out.println("Out of " + stateNodeMap.size()
                 + " nodes, " + proven + " are proven");
         System.out.println("Number of node expansions: " + NODE_EXPANSIONS);
-        StateActionTable table = getExplicitStateActionTable();
-        System.out.println("Policy entries: " + table.getNumberOfEntries());
+        System.out.println("Policy entries: " + getPolicy().size());
         if (simulatePlan) {
             long simulatorTime = System.currentTimeMillis();
-            double planCost = new PlanSimulator().performValueIteration(table);
+            double planCost = PlanSimulator.performValueIteration(getPolicy());
             long simulatorEndTime = System.currentTimeMillis();
             System.out.println("Plan cost (expected number of steps to goal): "
                     + planCost);
             System.out.println("Plan simulator time: "
                     + (simulatorEndTime - simulatorTime) / 1000 + " seconds.");
         }
-        System.out.println("Number of sensing applications in policy: " + table.getNumberOfSensingApplication());
+        System.out.println("Number of sensing applications in policy: " + getPolicy().getNumberOfSensingApplication());
+        System.out.println("Number of traced nodes: " + numberOfTracedNodes);
     }
 
     /**
@@ -862,21 +688,32 @@ public class AOStarSearch extends HeuristicSearch {
         starttime = System.currentTimeMillis();
 
         // Get initial state and insert it with depth 0.
-        initialNode = lookupAndInsert(Global.problem.getSingleInitialState(), 0);
+        initialNode = lookupAndInsert(Global.problem.getSingleInitialState());
+        nodeToStartTracing = (AOStarNode) initialNode;
 
         // Search until initial node is proven or disproven or a timeout occurs.
-        while (!initialNode.isProven && !initialNode.isDisproven && !timeout()) {
+        int i = 0;
+        while (!initialNode.isProven() && !initialNode.isDisproven() && !timeout()) {
+            if (DEBUG) {
+                System.out.println("Performing iteration " + i + " of AO* algorithm.");
+                System.out.println("  Number of nodes created: " + stateNodeMap.size());
+            }
             doIteration();
+            if (DEBUG || DUMP) {
+                dumpStateSpace();
+                dumpPartialSolution();
+            }
+            i++;
         }
 
         // Finish measuring search time.
         endtime = System.currentTimeMillis();
 
-        if (initialNode.isProven) {
+        if (initialNode.isProven()) {
             System.out
             .println("The protagonist has got a winning strategy.");
             return Result.PROVEN;
-        } else if (initialNode.isDisproven) {
+        } else if (initialNode.isDisproven()) {
             System.out
             .println("The protagonist does not have a winning strategy.");
             return Result.DISPROVEN;
@@ -897,17 +734,11 @@ public class AOStarSearch extends HeuristicSearch {
     }
 
     public AOStarNode setInitNode(AOStarNode init) {
-        initialNode = lookupAndInsert(init.state, 0);
+        initialNode = lookupAndInsert(init.state);
         return (AOStarNode) initialNode;
     }
 
-    /**
-     * Delete state action table.
-     */
-    public void deleteStateActionTable() {
-        explicitStateActionTable = null;
-    }
-
+    // TODO move this
     /**
      * Apply an operator to the node and create corresponding connectors.
      * 
@@ -922,9 +753,11 @@ public class AOStarSearch extends HeuristicSearch {
         Set<AOStarNode> successorNodes = new HashSet<AOStarNode>();
         Set<State> successorStates = node.state.apply(op);
         if (!successorStates.isEmpty()) {
+            Set<AOStarNode> ancestors = new HashSet<AOStarNode>((int) (node.ancestorNodes.size() / 0.75 + 1) + 1);
+            ancestors.addAll(node.ancestorNodes);
+            ancestors.add(node);
             for (State successor : successorStates) {
-                AOStarNode newNode = lookupAndInsert(successor,
-                        node.getDepth() + 1);
+                AOStarNode newNode = lookupAndInsert(successor);
                 successorNodes.add(newNode);
             }
             assert (!successorNodes.isEmpty());
@@ -934,7 +767,7 @@ public class AOStarSearch extends HeuristicSearch {
     }
 
     public AOStarSearch getCleanedSearchOnlyContainsThePlan() {
-        AOStarSearch result = new AOStarSearch();
+        AOStarSearch result = new AOStarSearch(heuristic);
         AOStarNode init = result.setInitNode(new AOStarNode(getInitNode().state, result, 0));
         assert init != null;
         AOStarNode node = getInitNode();

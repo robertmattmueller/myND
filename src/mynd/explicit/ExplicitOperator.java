@@ -121,11 +121,6 @@ public class ExplicitOperator extends Operator {
         //affectedVariables = Collections.unmodifiableSet(affectedVariables); // TODO
     }
 
-    public ExplicitOperator(String name, ExplicitCondition precondition, Set<Set<ExplicitEffect>> nondeterministicEffect, Set<Pair<Integer, Integer>> observation, boolean isAbstracted, boolean isDeterminized, double cost) {
-        this(name, precondition, nondeterministicEffect, observation, isAbstracted, cost);
-        this.isDeterminized = isDeterminized;
-    }
-
     /**
      * Get nondeterministic effect of this operator.
      * 
@@ -273,9 +268,6 @@ public class ExplicitOperator extends Operator {
             return false;
         }
         ExplicitOperator other = (ExplicitOperator) o;
-        if (isDeterminized != other.isDeterminized) {
-            return false;
-        }
         if (!observation.equals(other.observation)) {
             return false;
         }
@@ -339,7 +331,7 @@ public class ExplicitOperator extends Operator {
 
     @Override
     public Operator copy() {
-        return new ExplicitOperator(name, precondition, nondeterministicEffect, observation, isAbstracted, isDeterminized, cost);
+        return new ExplicitOperator(name, precondition, nondeterministicEffect, observation, isAbstracted, cost);
     }
 
     /**

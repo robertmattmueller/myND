@@ -32,7 +32,7 @@ public abstract class AbstractNode {
     /**
      * Unique index
      */
-    int index;
+    public final int index;
 
     /**
      * State represented by this node.
@@ -43,13 +43,13 @@ public abstract class AbstractNode {
      * Flag indicating that this node has been proven, i.e., the protagonist has
      * a winning strategy for this node.
      */
-    public boolean isProven = false;
+    private boolean isProven = false;
 
     /**
      * Flag indicating that this node has been disproven, i.e., the antagonist
      * has a winning strategy for this node.
      */
-    public boolean isDisproven = false;
+    private boolean isDisproven = false;
 
     /**
      * Flag indicating that this node has already been expanded.
@@ -128,5 +128,31 @@ public abstract class AbstractNode {
     public int getIndex() {
     	return index;
     }
-
+    
+    public boolean isProven() {
+        return isProven;
+    }
+    
+    public boolean isDisproven() {
+        return isDisproven;
+    }
+    
+    public void setProven() {
+        assert !isDisproven;
+        isProven = true;
+    }
+    
+    public void unsetProven() {
+        assert isProven;
+        isProven = false;
+    }
+    
+    public void setDisproven() {
+        assert !isProven;
+        isDisproven = true;
+    }
+    
+    public boolean isDecided() {
+        return isProven || isDisproven;
+    }
 }

@@ -25,11 +25,6 @@ public abstract class Operator {
     public final Set<Pair<Integer, Integer>> observation;
 
     /**
-     * Denotes if this operator is a determinized operator.
-     */
-    protected boolean isDeterminized = false;
-
-    /**
      * Denotes if this operator is abstracted.
      */
     public final boolean isAbstracted;
@@ -108,15 +103,6 @@ public abstract class Operator {
      * @return abstracted operator or null if resulting operator has no effects and no observations
      */
     public abstract Operator abstractToPattern(Set<Integer> pattern);
-
-    /**
-     * True iff this operator is a determinized operator.
-     * 
-     * @return true iff this operator is determinized
-     */
-    public boolean isDeterminized() {
-        return isDeterminized;
-    }
 
     /**
      * Delete BDDs if they are used.

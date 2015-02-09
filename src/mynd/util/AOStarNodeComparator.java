@@ -3,7 +3,7 @@ package mynd.util;
 import java.util.Comparator;
 
 import mynd.search.AOStarNode;
-import mynd.search.AOStarSearch;
+import mynd.search.LAOStarSearch;
 
 
 /**
@@ -22,17 +22,17 @@ public class AOStarNodeComparator implements Comparator<AOStarNode> {
 		this.indexOfRuleArray = indexOfRuleArray;
 		if (DEBUG) {
 			System.out.println("AOStarNodeComparator with rules: ");
-			for (int i = 0; i < AOStarSearch.expansionRules[indexOfRuleArray].length; i++)
-				System.out.print(AOStarSearch.expansionRules[indexOfRuleArray][i] + ", ");
+			for (int i = 0; i < LAOStarSearch.expansionRules[indexOfRuleArray].length; i++)
+				System.out.print(LAOStarSearch.expansionRules[indexOfRuleArray][i] + ", ");
 			System.out.println();
 		}
 	}
 	
 	private int compareRecursive(AOStarNode o1, AOStarNode o2, int indexOfRule) {
-		if (indexOfRule == AOStarSearch.expansionRules[indexOfRuleArray].length)
+		if (indexOfRule == LAOStarSearch.expansionRules[indexOfRuleArray].length)
 			return 0;
 		int result = 0;
-		switch (AOStarSearch.expansionRules[indexOfRuleArray][indexOfRule]) {
+		switch (LAOStarSearch.expansionRules[indexOfRuleArray][indexOfRule]) {
 		case MAX_DEPTH:
 			result = o2.getDepth() - o1.getDepth();
 			break;
@@ -66,8 +66,8 @@ public class AOStarNodeComparator implements Comparator<AOStarNode> {
 	public int compare(AOStarNode o1, AOStarNode o2) {
 		if (DEBUG) {
 			System.out.println("Call of compare with rules");
-			for (int i = 0; i < AOStarSearch.expansionRules[indexOfRuleArray].length; i++)
-				System.out.print(AOStarSearch.expansionRules[indexOfRuleArray][i] + ", ");
+			for (int i = 0; i < LAOStarSearch.expansionRules[indexOfRuleArray].length; i++)
+				System.out.print(LAOStarSearch.expansionRules[indexOfRuleArray][i] + ", ");
 			System.out.println();
 		}
 		return compareRecursive(o1, o2, 0);

@@ -10,8 +10,6 @@ import mynd.state.Operator;
 import mynd.util.Pair;
 import net.sf.javabdd.BDD;
 
-
-
 /**
  * 
  * @author Manuela Ortlieb
@@ -58,11 +56,6 @@ public class SymbolicOperator extends Operator {
         }
     }
 
-    public SymbolicOperator(String name, SymbolicCondition precondition, BDD effect, Set<Pair<Integer, Integer>> observation, boolean isAbstracted, boolean isDeterminized, double cost) {
-        this(name, precondition, effect, observation, isAbstracted, cost);
-        this.isDeterminized = isDeterminized;
-    }
-
     /**
      * Two BDD operators are equal if their precondition, their effect and their observations
      * are equal.
@@ -72,9 +65,6 @@ public class SymbolicOperator extends Operator {
         if (!(o instanceof SymbolicOperator))
             return false;
         SymbolicOperator op = (SymbolicOperator) o;
-        if (isDeterminized != op.isDeterminized) {
-            return false;
-        }
         if (!observation.equals(op.observation)) {
             return false;
         }
@@ -116,7 +106,6 @@ public class SymbolicOperator extends Operator {
      */
     @Override
     public SymbolicOperator abstractToPattern(Set<Integer> pattern) {
-        assert (!isDeterminized); // A determinized operator must not be abstracted.
         ExplicitOperator abstractedExplicitOp = Global.BDDManager.operatorMapping.get(this).abstractToPattern(pattern);
         if (abstractedExplicitOp == null)
             return null;
@@ -125,7 +114,6 @@ public class SymbolicOperator extends Operator {
 
     @Override
     public ExplicitOperator getExplicitOperator() {
-        assert (!isDeterminized);
         return Global.BDDManager.operatorMapping.get(this);
     }
 
@@ -147,12 +135,8 @@ public class SymbolicOperator extends Operator {
     @Override
     public void dump() {
         System.out.println("Symbolic operator: " + name);
-        if (!isDeterminized()) {
-            System.out.println("Explicit representation:");
-            Global.BDDManager.operatorMapping.get(this).dump();
-        }
-        else 
-            System.out.println("!! Determinized operator !!");
+        System.out.println("Explicit representation:");
+        Global.BDDManager.operatorMapping.get(this).dump();
     }
 
     /**

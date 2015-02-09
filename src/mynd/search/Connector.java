@@ -1,5 +1,8 @@
 package mynd.search;
 
+import java.util.HashSet;
+import java.util.LinkedList;
+import java.util.Queue;
 import java.util.Set;
 
 import mynd.state.Operator;
@@ -67,8 +70,26 @@ public class Connector {
         this.operator = operator;
         baseCost = operator.getCost();
         parent.outgoingConnectors.add(this);
+        // Update ancestor lists of all successors of parent
+        Queue<AOStarNode> successors = new LinkedList<AOStarNode>();
+        Set<AOStarNode> seen = new HashSet<AOStarNode>();
         for (AOStarNode child : children) {
             child.incomingConnectors.add(this);
+            successors.add(child);
+        }
+        Set<AOStarNode> additionalAncestors = new HashSet<AOStarNode>(parent.ancestorNodes);
+        additionalAncestors.add(parent);
+        while (!successors.isEmpty()) {
+            AOStarNode succ = successors.poll();
+            succ.ancestorNodes.addAll(additionalAncestors);
+            for (Connector c : succ.outgoingConnectors) {
+                for (AOStarNode n : c.children) {
+                    if (!seen.contains(n)) {
+                        seen.add(n);
+                        successors.add(n);
+                    }
+                }
+            }
         }
     }
 
@@ -162,8 +183,8 @@ public class Connector {
         isProven = true;
         isDisproven = false;
         for (AOStarNode child : children) {
-            isProven &= child.isProven;
-            isDisproven |= child.isDisproven;
+            isProven &= child.isProven();
+            isDisproven |= child.isDisproven();
         }
     }
     
