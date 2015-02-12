@@ -19,7 +19,6 @@ import java.util.Set;
 
 import mynd.Global;
 import mynd.Global.ExitCode;
-import mynd.MyNDPlanner.Algorithm;
 import mynd.heuristic.Heuristic;
 import mynd.search.policy.Policy;
 import mynd.simulator.PlanSimulator;
@@ -45,7 +44,7 @@ public class AOStarSearch extends HeuristicSearch {
     public enum SelectionFunction {
         MINH, MAXH, OLDEST, NEWEST
     }; 
-    
+
     /**
      * How to tie break between unexpanded nodes if the selection
      * function returns the same value for them.
@@ -102,7 +101,7 @@ public class AOStarSearch extends HeuristicSearch {
 
 
     private AOStarNode nodeToStartTracing;
-    
+
     private PriorityQueue<AOStarNode> unexpandedNodesFromTracing = new PriorityQueue<AOStarNode>(100, new NodeComparator());
 
     /**
@@ -119,10 +118,11 @@ public class AOStarSearch extends HeuristicSearch {
      * Counter for number of dumped states spaces.
      */
     private int dumpingCounterStateSpace = 0;
-    
+
     /**
      * Counter for number of traced nodes.
      */
+    @SuppressWarnings("unused")
     private int numberOfTracedNodes = 0;
 
     public static boolean sensingFirst = false;
@@ -219,7 +219,7 @@ public class AOStarSearch extends HeuristicSearch {
      * @param node
      *            Node to expand
      */
-    private void expand(AOStarNode node) {
+    protected void expand(AOStarNode node) {
         if (DEBUG) {
             System.out.println("Node " + node + " is expaneded now!");
         }
@@ -228,7 +228,7 @@ public class AOStarSearch extends HeuristicSearch {
             List<Operator> applicableOps;
             if (restrictSensingOps) {
                 assert (!Global.problem.isFullObservable);
-                
+
                 // We apply only one sensing op to reduce branching.
                 List<Operator> applicableSensingOps = node.state
                         .getApplicableOps(sensingOps);
@@ -259,14 +259,12 @@ public class AOStarSearch extends HeuristicSearch {
                 ancestors.add(node);
                 for (State successor : successorStates) {
                     AOStarNode newNode = lookupAndInsert(successor);
-                    if (Global.algorithm == Algorithm.AOSTAR) { // TODO
-                        // In case of AO* search, we only add a connector 
-                        // if it does not lead to a cycle.
-                        if (ancestors.contains(newNode)) {
-                            children.clear();
-                            break;
-                        }
-                    } 
+                    // In case of AO* search, we only add a connector 
+                    // if it does not lead to a cycle.
+                    if (ancestors.contains(newNode)) {
+                        children.clear();
+                        break;
+                    }
                     children.add(newNode);
                 }
                 if (!children.isEmpty()) {
@@ -347,7 +345,7 @@ public class AOStarSearch extends HeuristicSearch {
      * @return The unique node corresponding to the given state, either newly
      *         created or old.
      */
-    public AOStarNode lookupAndInsert(State state) {
+    private AOStarNode lookupAndInsert(State state) {
         AOStarNode node;
         if (!stateNodeMap.containsKey(state.uniqueID)) {
             // This is a new node.
@@ -391,7 +389,7 @@ public class AOStarSearch extends HeuristicSearch {
         for (int i = 0; i < num; i++) {
             result.add(i, nodesToExpand.poll());
         }
-        
+
         // Used in the case that complete tracing is not necessary in the next iteration
         // (meaning that during update nothing changed).
         unexpandedNodesFromTracing = nodesToExpand; 
@@ -604,7 +602,7 @@ public class AOStarSearch extends HeuristicSearch {
             AOStarNode node = queue.poll();
             seen.add(node);
             double oldCostEstimate = node.costEstimate;
-            
+
             int updateEffect;
             if (node.isDisproven()) {
                 updateEffect = AOStarSearch.UPDATED_PROOF_STATUS;
@@ -618,7 +616,7 @@ public class AOStarSearch extends HeuristicSearch {
             if (updateEffect != UPDATED_NOTHING) {
                 for (Connector connector : node.incomingConnectors) {
                     AOStarNode parent = connector.parent;
-                    
+
                     // Non-marked connector nodes get not updated unless the cost estimate is decreasing.
                     if (connector != parent.markedConnector && !connector.isProven()) {
                         if (node.costEstimate >= oldCostEstimate) {
@@ -641,7 +639,7 @@ public class AOStarSearch extends HeuristicSearch {
         else {
             unexpandedNodesFromTracing.clear(); // Reset.
         }
-        
+
     }
 
     /**
@@ -670,7 +668,7 @@ public class AOStarSearch extends HeuristicSearch {
                     + (simulatorEndTime - simulatorTime) / 1000 + " seconds.");
         }
         System.out.println("Number of sensing applications in policy: " + getPolicy().getNumberOfSensingApplication());
-        System.out.println("Number of traced nodes: " + numberOfTracedNodes);
+        //System.out.println("Number of traced nodes: " + numberOfTracedNodes);
     }
 
     /**

@@ -5,6 +5,8 @@ import java.util.LinkedList;
 import java.util.Queue;
 import java.util.Set;
 
+import mynd.Global;
+import mynd.MyNDPlanner.Algorithm;
 import mynd.state.Operator;
 
 
@@ -77,16 +79,18 @@ public class Connector {
             child.incomingConnectors.add(this);
             successors.add(child);
         }
-        Set<AOStarNode> additionalAncestors = new HashSet<AOStarNode>(parent.ancestorNodes);
-        additionalAncestors.add(parent);
-        while (!successors.isEmpty()) {
-            AOStarNode succ = successors.poll();
-            succ.ancestorNodes.addAll(additionalAncestors);
-            for (Connector c : succ.outgoingConnectors) {
-                for (AOStarNode n : c.children) {
-                    if (!seen.contains(n)) {
-                        seen.add(n);
-                        successors.add(n);
+        if (Global.algorithm == Algorithm.AOSTAR) {
+            Set<AOStarNode> additionalAncestors = new HashSet<AOStarNode>(parent.ancestorNodes);
+            additionalAncestors.add(parent);
+            while (!successors.isEmpty()) {
+                AOStarNode succ = successors.poll();
+                succ.ancestorNodes.addAll(additionalAncestors);
+                for (Connector c : succ.outgoingConnectors) {
+                    for (AOStarNode n : c.children) {
+                        if (!seen.contains(n)) {
+                            seen.add(n);
+                            successors.add(n);
+                        }
                     }
                 }
             }

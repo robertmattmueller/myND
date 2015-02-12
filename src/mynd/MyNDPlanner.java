@@ -503,17 +503,19 @@ public class MyNDPlanner {
         System.out.println("Time needed for preprocess (Parsing, PDBs, ...):    " + timeUsedForPreprocessing / 1000.0 + " seconds.");
         System.out.println("Time needed for search:                             " + (timeUsedOverall - timeUsedForPreprocessing) / 1000.0 + " seconds.");
         System.out.println("Time needed:                                        " + timeUsedOverall / 1000.0 + " seconds.");
+        printGCStats();
         System.out.println();
-
+        
         if (planFound == Result.PROVEN) {
             search.printStats(calculateCosts);
 
             // Extract and dump plan.
             if (dumpPlan) {
+                System.out.println();
                 search.dumpPlan();
             }
         }
-        printGCStats();
+
 
         return planFound;
     }

@@ -23,7 +23,6 @@ import mynd.heuristic.graph.Connector;
 import mynd.heuristic.graph.Node;
 import mynd.state.Operator;
 import mynd.state.State;
-import mynd.symbolic.BeliefState;
 import mynd.util.Pair;
 
 

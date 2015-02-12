@@ -1,6 +1,7 @@
 package mynd.search;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -15,6 +16,7 @@ import java.util.Set;
 
 import mynd.Global;
 import mynd.heuristic.Heuristic;
+import mynd.state.Operator;
 import mynd.state.State;
 import mynd.util.AOStarNodeComparator;
 import mynd.util.Pair;
@@ -114,6 +116,26 @@ public class LAOStarSearch extends AOStarSearch {
         }
     }
     
+    /**
+     * Perform one iteration of the LAO* algorithm.
+     */
+    @Override
+    public void doIteration() {
+        if (DEBUG) {
+            System.out.println("New iteration: Unexpanded nodes:");
+            System.out.println(unexpandedNodes.get(0));
+            if (Global.problem.isFullObservable) {
+                dumpStateSpace();
+                dumpPartialSolution();
+            }
+        }
+        if (unexpandedNodes.get(0).isEmpty()) {
+            // There is no unexpanded node in the graph.
+            initialNode.setDisproven();
+        } else {
+            super.doIteration();
+        }
+    }
     
     /**
      * Trace down all marked connectors starting from a given state, collecting
@@ -186,15 +208,7 @@ public class LAOStarSearch extends AOStarSearch {
     @Override
     protected List<AOStarNode> nodesToExpand() {
         AOStarNode initial;
-        // More efficient for AO*-algorithm. But only if exactly one node is
-        // expanded. Not used for LAO*.
-        // if (nothingChanged) {
-        // initial = lastExpandedNode;
-        // System.err.println("Nothing changed!");
-        // }
-        // else {
         initial = (AOStarNode) initialNode;
-        // }
         PriorityQueue<AOStarNode> nodesToExpand = traceMarkedConnectors(initial);
         if (timeout()) {
             return null;
@@ -215,8 +229,8 @@ public class LAOStarSearch extends AOStarSearch {
             // node from the AND/OR-graph.
             if (DEBUG) {
                 System.out.println("Case 2: Tracing was not successful!");
+                System.out.println("unexpanded nodes " + unexpandedNodes);
             }
-            assert false : "Tracing current best partial solution graph was not successful.";
 
             PriorityQueue<AOStarNode> unexpanded = unexpandedNodes
                     .get(alternatingIndex);
@@ -287,6 +301,73 @@ public class LAOStarSearch extends AOStarSearch {
         }
 
         return new Pair<Map<Connector, Integer>, Set<Connector>>(distanceMap, backwardReachableConnectors);
+    }
+    
+    /**
+     * Expands a given node by creating all outgoing connectors and the
+     * corresponding successor states. New states and connectors are installed
+     * in the explicit game graph representation.
+     * 
+     * @param node
+     *            Node to expand
+     */
+    @Override
+    protected void expand(AOStarNode node) {
+        if (DEBUG) {
+            System.out.println("Node " + node + " is expaneded now!");
+        }
+        node.setExpanded();
+        for (PriorityQueue<AOStarNode> queue : unexpandedNodes) {
+            queue.remove(node); // O(n) - TODO: improve this!
+        }
+        if (!node.isDecided()) {
+            List<Operator> applicableOps;
+            if (restrictSensingOps) {
+                assert (!Global.problem.isFullObservable);
+                
+                // We apply only one sensing op to reduce branching.
+                List<Operator> applicableSensingOps = node.state
+                        .getApplicableOps(sensingOps);
+                if (!applicableSensingOps.isEmpty()) {
+                    // We use the first sensing op.
+                    applicableOps = new LinkedList<Operator>(
+                            Arrays.asList(applicableSensingOps.get(0)));
+                    if (!sensingFirst) {
+                        // We also apply causative ops.
+                        applicableOps.addAll(node.state
+                                .getApplicableOps(causativeOps));
+                    }
+                } else {
+                    // No applicable sensing op. Apply all causative actions.
+                    applicableOps = node.state.getApplicableOps(causativeOps);
+                }
+            } else {
+                applicableOps = node.state.getApplicableOps(Global.problem
+                        .getOperators());
+            }
+            boolean hasSuccessor = false; // which is different from node (no self-loop)
+            for (Operator op : applicableOps) {
+                Set<State> successorStates = node.state.apply(op);
+                assert !successorStates.isEmpty();
+                Set<AOStarNode> children = new LinkedHashSet<AOStarNode>();
+                for (State successor : successorStates) {
+                    AOStarNode newNode = lookupAndInsert(successor, node.getDepth() + 1);
+                    children.add(newNode);
+                }
+                if (!children.isEmpty()) {
+                    new Connector(node, children, op);
+                    if (!(children.size() == 1 && children.iterator().next() == node)) {
+                        hasSuccessor = true;
+                    }
+                }
+            }
+            if (!hasSuccessor) {
+                node.setDisproven(); // Dead end.
+            }
+            NODE_EXPANSIONS++;
+        } else {
+            assert false : "Node to expand is already decided.";
+        }
     }
 
     private void computeWeakDiscretePlanSteps(List<AOStarNode> nodes) {
@@ -561,7 +642,7 @@ public class LAOStarSearch extends AOStarSearch {
                 System.out.println("Performing iteration " + i++ + " of LAO* algorithm.");
                 System.out.println("  Number of nodes created: " + stateNodeMap.size());
             }
-            if (DUMP) {
+            if (DEBUG) {
                 dumpStateSpace();
                 dumpPartialSolution();
             }
@@ -597,7 +678,7 @@ public class LAOStarSearch extends AOStarSearch {
      * @return The unique node corresponding to the given state, either newly
      *         created or old.
      */
-    public AOStarNode lookupAndInsert(State state, int depth) {
+    private AOStarNode lookupAndInsert(State state, int depth) {
         AOStarNode node;
         if (!stateNodeMap.containsKey(state.uniqueID)) {
             // This is a new node.

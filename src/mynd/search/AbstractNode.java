@@ -105,7 +105,7 @@ public abstract class AbstractNode {
     }
     
     public void setExpanded() {
-    	assert isExpanded == false;
+    	assert isExpanded == false : "It does not make sense to expand a node a second time.";
     	isExpanded = true;
     	//state.beliefStateBDD.free();
     	//state = null;
