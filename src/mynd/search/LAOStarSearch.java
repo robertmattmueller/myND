@@ -500,7 +500,6 @@ public class LAOStarSearch extends AOStarSearch {
                 node.costEstimate = 0.0; // TODO: Is this correct or if (node.isProven()())
             }
             else if (node.isDisproven()) {
-                assert false;
                 node.costEstimate = Heuristic.INFINITE_HEURISTIC;
             }
             else {
