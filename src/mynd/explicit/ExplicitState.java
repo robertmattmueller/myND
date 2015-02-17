@@ -36,11 +36,6 @@ public class ExplicitState extends State {
     public final int size;
 
     /**
-     * HashCode which is used in collections which use hashing.
-     */
-    public final int hashCode;
-
-    /**
      * Axiom evaluator.
      */
     private ExplicitAxiomEvaluator axiomEvaluator;
@@ -85,7 +80,6 @@ public class ExplicitState extends State {
         assert assertVariableOrder(variableValueAssignment);
         this.variableValueAssignment = variableValueAssignment;
         size = variableValueAssignment.size();
-        hashCode = uniqueID.intValue();
         this.axiomEvaluator = axiomEvaluator;
 
         // It is important to assert that there is no overflow for abstract states.
@@ -204,51 +198,6 @@ public class ExplicitState extends State {
     @Override
     public List<ExplicitState> getAllExplicitWorldStates() {
         return new ArrayList<ExplicitState>(Arrays.asList(this));
-    }
-
-    //	public List<Integer> computeCompleteValuation() {
-    //		List<Integer> valuation = new ArrayList<Integer>(Global.problem.numStateVars);
-    //		for (int var = 0; var < Global.problem.numStateVars; var++) {
-    //			if (variableValueAssignment.containsKey(var)) {
-    //				valuation.add(var, variableValueAssignment.get(var));
-    //			}
-    //			else {
-    //				valuation.add(var, -1);
-    //			}
-    //		}
-    //		return valuation;
-    //	}
-
-    /**
-     * Check equality for this object and given object.
-     * 
-     * @param o object to compare
-     * @return true iff both objects are explicit states and variable value assignments are equal.
-     */
-    public boolean equals(Object o) {
-        if (!(o instanceof ExplicitState)) {
-            return false;
-        }
-        ExplicitState s = (ExplicitState) o;
-        if (size != s.size) {
-            return false;
-        }
-        for (int var : variableValueAssignment.keySet()) {
-            if (!s.variableValueAssignment.containsKey(var)) {
-                return false;
-            }
-            if (!variableValueAssignment.get(var).equals(s.variableValueAssignment.get(var)))
-                return false;
-        }
-        return true;
-    }
-
-    /**
-     * HashCode which is not unique.
-     */
-    @Override
-    public int hashCode() {
-        return hashCode;
     }
 
     /**

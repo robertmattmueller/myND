@@ -41,7 +41,7 @@ public class Node {
     		costEstimate = 0.0;
     		isGoalNode = true;
     	}
-    	index = state.hashCode();
+    	index = state.hashCode;
         gValue = Heuristic.INFINITE_HEURISTIC;
         hValue = Heuristic.INFINITE_HEURISTIC;
         parent = null;

@@ -36,12 +36,14 @@ public class NodeComparator implements Comparator<AOStarNode> {
                         return o1.getIndex() - o2.getIndex();
                     }
                     assert tieBreaker == TieBreaker.NEWEST;
+                    //selectionFunction = SelectionFunction.NEWEST;
                     return o2.getIndex() - o1.getIndex();
                 }
                 return o2.getHeuristic() - o1.getHeuristic();
             case OLDEST:
                 return o1.getIndex() - o2.getIndex();
             case NEWEST:
+                //selectionFunction = SelectionFunction.MAXH;
                 return o2.getIndex() - o1.getIndex();
             default:
                 assert false; 

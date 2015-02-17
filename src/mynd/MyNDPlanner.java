@@ -516,7 +516,6 @@ public class MyNDPlanner {
             }
         }
 
-
         return planFound;
     }
 

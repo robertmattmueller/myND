@@ -1,5 +1,7 @@
 package mynd.search;
 
+import java.math.BigInteger;
+
 import mynd.Global;
 import mynd.state.State;
 
@@ -70,6 +72,11 @@ public abstract class AbstractNode {
      * Indicates if this is a goal node.
      */
     boolean isGoalNode = false;
+    
+    /**
+     * Unique id of the represented state.
+     */
+    final BigInteger stateID;
 
     /**
      * Creates a new node for a given state.
@@ -79,6 +86,7 @@ public abstract class AbstractNode {
      */
     public AbstractNode(State state, int depth) {
         this.state = state;
+        stateID = state.uniqueID;
     	setDepth(depth);
         index = nextFreeIndex++;
         if (state.isGoalState()) {
@@ -91,12 +99,13 @@ public abstract class AbstractNode {
         if (!(o instanceof AbstractNode)) {
             return false;
         }
-        return state.equals(((AbstractNode) o).state);
+        AbstractNode other = (AbstractNode) o;
+        return stateID.equals(other.stateID);
     }
 
     @Override
     public int hashCode() {
-        return state.hashCode();
+        return stateID.intValue();
     }
 
     @Override

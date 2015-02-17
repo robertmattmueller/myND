@@ -4,6 +4,7 @@ import java.io.File;
 import java.io.FileWriter;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedHashMap;
 import java.util.List;
@@ -34,10 +35,10 @@ public class Policy {
     /**
      * Policy entries, that are mappings from state to an applicable operator.
      */
-    final LinkedHashMap<State, Pair<Operator, Integer>> entries;
+    final HashMap<State, Pair<Operator, Integer>> entries;
 
     public Policy() {
-        this.entries = new LinkedHashMap<State, Pair<Operator, Integer>>();
+        entries = new HashMap<State, Pair<Operator, Integer>>();
     }
 
     public boolean containsEntry(State state) {
@@ -54,10 +55,10 @@ public class Policy {
     
     public void addEntry(State key, Operator op) {
         addEntry(key, op, -1);
+        
     }
 
     public void addEntry(State key, Operator op, int distance) {
-        assert Global.problem.getOriginalOperatorMap().containsKey(op.getName());
         entries.put(key, new Pair<Operator, Integer>(Global.problem.getOriginalOperatorMap().get(op.getName()), distance));
     }
 

@@ -189,28 +189,6 @@ public class BeliefState extends State {
     }
 
     /**
-     * Get hash code of this belief state.
-     * 
-     * @return unique hash code
-     */
-    public int hashCode() {
-        // this is a unique hashCode!
-        return beliefStateBDD.hashCode();
-    }
-
-    /**
-     * Check equality of this state and given object.
-     * 
-     * @return true iff state equals given object
-     */
-    public boolean equals(Object obj) {
-        if (!(obj instanceof BeliefState)) {          
-            return false;
-        }
-        return beliefStateBDD.equals(((BeliefState) obj).beliefStateBDD);
-    }
-
-    /**
      * Only call this if you are sure that this state is "deleted" afterwards.
      */
     public void free() {
@@ -283,7 +261,7 @@ public class BeliefState extends State {
         if (DEBUG) {
             System.out.println("Sampled world states (out of " + getNumberOfWorldStates() + " possible states)");
             for (ExplicitState state : explicitStates)
-                System.out.println(state.hashCode());
+                System.out.println(state.hashCode);
         }
         return explicitStates;
     }

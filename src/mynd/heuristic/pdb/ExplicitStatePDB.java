@@ -115,7 +115,7 @@ public class ExplicitStatePDB extends PDB {
         Collection<Node> nodes = comp.run();
         for (Node node : nodes) {
             if (node.getCostEstimate() != Node.UNINITIALIZED_COST_ESTIMATE) {
-                patternDatabase[node.getState().hashCode()] = node.getCostEstimate();
+                patternDatabase[node.getState().hashCode] = node.getCostEstimate();
             }
         }
         if (DEBUG) {
@@ -128,7 +128,7 @@ public class ExplicitStatePDB extends PDB {
                 System.out.print(node);
                 if (node != null) {
                     System.out.println(" cost estimate: " + node.getCostEstimate() + " / state: " + node.getState());
-                    System.out.println(" node hash code: " + node.getState().hashCode());
+                    System.out.println(" node hash code: " + node.getState().hashCode);
                 }
                 else {
                     System.out.println();

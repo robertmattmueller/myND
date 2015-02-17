@@ -122,7 +122,6 @@ public class AOStarSearch extends HeuristicSearch {
     /**
      * Counter for number of traced nodes.
      */
-    @SuppressWarnings("unused")
     private int numberOfTracedNodes = 0;
 
     public static boolean sensingFirst = false;
@@ -282,24 +281,29 @@ public class AOStarSearch extends HeuristicSearch {
             assert false : "Node to expand is already decided.";
         }
     }
+    
 
     /**
      * Fill the state action table by following marked 
      * connectors in the search graph.
      */
-    private Set<AOStarNode> fillStateActionTable(AOStarNode node, Set<AOStarNode> seen) {
-        if (!node.state.isGoalState()) {
-            assert node.markedConnector != null;
-            assert node.markedConnector.operator != null;
-            policy.addEntry(node.state, node.markedConnector.operator);
-            seen.add(node);
-            for (AOStarNode child : node.markedConnector.children) {
-                if (!seen.contains(child)) {
-                    seen = fillStateActionTable(child, seen);
+    private void fillStateActionTable(AOStarNode node) {
+        HashSet<AOStarNode> seen = new HashSet<AOStarNode>();
+        Queue<AOStarNode> queue = new LinkedList<AOStarNode>();
+        seen.add(node);
+        queue.add(node);
+        while (!queue.isEmpty()) {
+            node = queue.poll();
+            if (!node.isGoalNode) {
+                policy.addEntry(node.state, node.markedConnector.operator);
+                for (AOStarNode child : node.markedConnector.children) {
+                    if (!seen.contains(child)) {
+                        seen.add(child);
+                        queue.add(child);
+                    }
                 }
             }
         }
-        return seen;
     }
 
     /**
@@ -320,8 +324,7 @@ public class AOStarSearch extends HeuristicSearch {
         else {
             if (policy == null) {
                 policy = new Policy();
-                Set<AOStarNode> seen = new LinkedHashSet<AOStarNode>();
-                fillStateActionTable((AOStarNode) initialNode, seen);
+                fillStateActionTable((AOStarNode) initialNode);
             }
             return policy;
         }
@@ -667,8 +670,12 @@ public class AOStarSearch extends HeuristicSearch {
             System.out.println("Plan simulator time: "
                     + (simulatorEndTime - simulatorTime) / 1000 + " seconds.");
         }
-        System.out.println("Number of sensing applications in policy: " + getPolicy().getNumberOfSensingApplication());
-        //System.out.println("Number of traced nodes: " + numberOfTracedNodes);
+        if (!Global.problem.isFullObservable) {
+            System.out.println("Number of sensing applications in policy: " + getPolicy().getNumberOfSensingApplication());
+        }
+        if (DEBUG) {
+            System.out.println("Number of traced nodes: " + numberOfTracedNodes);
+        }
     }
 
     /**

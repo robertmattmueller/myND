@@ -333,15 +333,15 @@ public class AbstractCostComputation {
      * @return node which corresponds to given state.
      */
     Node lookupAndInsert(State state, Queue<Node> queue) {
-        if (!nodes.containsKey(state.hashCode())) {
+        if (!nodes.containsKey(state.hashCode)) {
             Node n = new Node(state);
-            nodes.put(state.hashCode(), n);
+            nodes.put(state.hashCode, n);
             queue.offer(n);
         }
         else {
-            assert nodes.get(state.hashCode()).getState().equals(state);
+            assert nodes.get(state.hashCode).getState().equals(state);
         }
-        return nodes.get(state.hashCode());
+        return nodes.get(state.hashCode);
     }
 
     /**
