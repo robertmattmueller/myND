@@ -120,7 +120,7 @@ public abstract class State {
      */
     @Override
     public boolean equals(Object o) {
-        if (!(o instanceof ExplicitState)) {
+        if (!(o instanceof State)) {
             return false;
         }
         State s = (State) o;

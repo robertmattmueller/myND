@@ -123,6 +123,8 @@ public class PlanSimulator {
             Node node = queue.poll();
             Set<Node> children = new LinkedHashSet<Node>();
 
+            assert node != null;
+            assert node.state != null;
             Operator op = policy.getOperator(node.state);
 
             Set<State> successorStates = node.state.apply(op);

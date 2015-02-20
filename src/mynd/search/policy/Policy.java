@@ -46,6 +46,7 @@ public class Policy {
     }
 
     public Operator getOperator(State state) {
+        assert entries.containsKey(state);
         return entries.get(state).first;
     }
     
@@ -55,10 +56,10 @@ public class Policy {
     
     public void addEntry(State key, Operator op) {
         addEntry(key, op, -1);
-        
     }
 
     public void addEntry(State key, Operator op, int distance) {
+        assert op != null;
         entries.put(key, new Pair<Operator, Integer>(Global.problem.getOriginalOperatorMap().get(op.getName()), distance));
     }
 
