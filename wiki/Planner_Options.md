@@ -35,12 +35,10 @@ The following options can be used to control the expansion strategy of the AO* a
 ```
 #!bash
 
-[-maxNumberOfNodesToExpand INTEGER] [-rateOfNodesToExpand DOUBLE] [-linear LIST] [-alternate INTEGER LIST_1 ... LIST_n]
+[-maxNumberOfNodesToExpand INTEGER] [-linear LIST] [-alternate INTEGER LIST_1 ... LIST_n]
 ```
 
 * `-maxNumberOfNodesToExpand INTEGER` Maximal number of nodes of the AND/OR-graph which are expanded in *one iteration*. ***Default:*** 1.
-
-* `-rateOfNodesToExpand DOUBLE[0.0,1.0]` If no node to expand is found in current best partial solution graph, then expand rateOfNodesToExpand of the unexpanded nodes (but not more than *maxNumberOfNodesToExpand*). ***Default:*** 1.0.
 
 To make the next two options clear, it is important to know, that the set of unexpanded nodes is organized in a priority queue. With options `-linear` and `-alternate` you are able to specify the sorting of this queue. Experimental results show that it is crucial for efficiency to set these options reasonably. Our default option, namely alternating between expanding the nodes with minimal heuristic (plus oldest nodes as tie-breaker) and the oldest nodes, seems to have a good overall performance on our benchmarks. If you want to use the default configuration, do not use `-linear` or `-alternate`. Nodes with highest priority in this set of unexpanded nodes are expanded in situations where no unexpanded child node is found while tracing the current best partial solution graph.
 
