@@ -44,7 +44,7 @@ To make the next two options clear, it is important to know, that the set of une
 
 * `-linear LIST{minHeuristic,maxHeuristic,minDepth,maxDepth,oldest,newest,random}` Specify which unexpanded nodes should be expanded. The first keyword in the list is the main criterion. The others are used for tie-breaking. See the example below.
 
-* `-alternate INTEGER LIST_1 ... LIST_n` Give the number of lists n, followed by lists LIST{minHeuristic,maxHeuristic,minDepth,maxDepth,oldest,newest,random} which specify which unexpanded nodes should be expanded. Each list defines an expansion strategy and in each iteration these strategies are considered in a round-robin fashion. See the example below.
+* `-alternate INTEGER LIST_1 ... LIST_n` Give the number of lists n, followed by lists LIST{minHeuristic,maxHeuristic,oldest,newest,random} which specify which unexpanded nodes should be expanded. Each list defines an expansion strategy and in each iteration these strategies are considered in a round-robin fashion. See the example below.
 
 *Note*: The option `-linear` is a special case of `-alternate 1 LIST`.
 
