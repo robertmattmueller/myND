@@ -1,210 +1,209 @@
 package mynd.search;
 
-import java.util.HashSet;
-import java.util.LinkedList;
-import java.util.Queue;
 import java.util.Set;
 
-import mynd.Global;
-import mynd.MyNDPlanner.Algorithm;
 import mynd.state.Operator;
 
 
 /**
  * A connector associates with a node <tt>node</tt> a set of successor nodes
- * <tt>succ_1, ..., succ_n</tt>. One connector corresponds to an AND
- * conjunction, whereas several outgoing connectors from one node are
- * interpreted disjunctively. Hence, a list of outgoing connectors corresponds
- * to a disjunction over conjunctions over possible successor states.
- * 
+ * <tt>succ_1, ..., succ_n</tt>. One connector corresponds to an AND conjunction, whereas several
+ * outgoing connectors from one node are interpreted disjunctively. Hence, a list of outgoing
+ * connectors corresponds to a disjunction over conjunctions over possible successor states.
+ *
  * @author Robert Mattmueller
- * 
+ *
  */
 public class Connector {
 
-    /**
-     * Parent node to which this connector is attached
-     */
-    AOStarNode parent;
+  /**
+   * Parent node to which this connector is attached
+   */
+  AOStarNode parent;
 
-    /**
-     * Child nodes
-     */
-    Set<AOStarNode> children;
+  /**
+   * Child nodes
+   */
+  Set<AOStarNode> children;
 
-    /**
-     * Operator which corresponds to this connector.
-     */
-    public final Operator operator;
+  /**
+   * Operator which corresponds to this connector.
+   */
+  public final Operator operator;
 
-    boolean isSafe = true;
+  boolean isSafe = true;
 
-    /**
-     * Base cost of this connector
-     */
-    double baseCost;
-    
-    /**
-     * True iff. all of its children are proven.
-     */
-    private boolean isProven = false;
-    
-    /**
-     * True iff. at least one of its children is disproven.
-     */
-    private boolean isDisproven = false;
+  /**
+   * Base cost of this connector
+   */
+  double baseCost;
 
-    /**
-     * Creates a new connector. Links parent and child nodes back to this
-     * connector.
-     * 
-     * @param parent
-     *            Node to which this connector is attached
-     * @param children
-     *            Child nodes
-     * @param operator
-     *            Name of operator inducing this connector
-     */
-    public Connector(AOStarNode parent, Set<AOStarNode> children, Operator operator) {
-        this.parent = parent;
-        //this.children = Collections.unmodifiableSet(children); // FIXME done for simple min observation
-        this.children = children;
-        this.operator = operator;
-        baseCost = operator.getCost();
-        parent.outgoingConnectors.add(this);
-        // Update ancestor lists of all successors of parent
-        Queue<AOStarNode> successors = new LinkedList<AOStarNode>();
-        Set<AOStarNode> seen = new HashSet<AOStarNode>();
-        for (AOStarNode child : children) {
-            child.incomingConnectors.add(this);
-            successors.add(child);
-        }
-        if (Global.algorithm == Algorithm.AOSTAR) {
-            Set<AOStarNode> additionalAncestors = new HashSet<AOStarNode>(parent.ancestorNodes);
-            additionalAncestors.add(parent);
-            while (!successors.isEmpty()) {
-                AOStarNode succ = successors.poll();
-                succ.ancestorNodes.addAll(additionalAncestors);
-                for (Connector c : succ.outgoingConnectors) {
-                    for (AOStarNode n : c.children) {
-                        if (!seen.contains(n)) {
-                            seen.add(n);
-                            successors.add(n);
-                        }
-                    }
-                }
-            }
-        }
-    }
+  /**
+   * True iff. all of its children are proven.
+   */
+  private boolean isProven = false;
 
-    @Override
-    public boolean equals(Object o) {
-        if (!(o instanceof Connector)) {
-            return false;
-        }
-        Connector c = (Connector) o;
-        if (parent.equals(c.parent) && children.equals(c.children)) {
-        	return true;
-        }
-        return false;
-    }
+  /**
+   * True iff. at least one of its children is disproven.
+   */
+  private boolean isDisproven = false;
 
-    @Override
-    public int hashCode() {
-        return parent.hashCode() + children.hashCode();
+  /**
+   * Creates a new connector. Links parent and child nodes back to this connector.
+   *
+   * @param parent Node to which this connector is attached
+   * @param children Child nodes
+   * @param operator Name of operator inducing this connector
+   */
+  public Connector(AOStarNode parent, Set<AOStarNode> children, Operator operator) {
+    this.parent = parent;
+    this.children = children;
+    this.operator = operator;
+    baseCost = operator.getCost();
+    parent.outgoingConnectors.add(this);
+    for (AOStarNode child : children) {
+      child.incomingConnectors.add(this);
     }
+  }
 
-    @Override
-    public String toString() {
-        StringBuffer buffer = new StringBuffer();
-        buffer.append(parent.toString());
-        buffer.append(" -> [ ");
-        for (AOStarNode child : children) {
-            buffer.append(child.toString());
-            buffer.append(" ");
-        }
-        buffer.append("] hash " + hashCode());
-        return buffer.toString();
+  @Override
+  public boolean equals(Object o) {
+    if (!(o instanceof Connector)) {
+      return false;
     }
-    
-    public void setBaseCost(double baseCost) {
-    	this.baseCost = baseCost;
+    Connector c = (Connector) o;
+    if (parent.equals(c.parent) && children.equals(c.children)) {
+      return true;
     }
-    
-    public double getBaseCost() {
-    	return this.baseCost;
+    return false;
+  }
+
+  @Override
+  public int hashCode() {
+    return parent.hashCode() + children.hashCode();
+  }
+
+  @Override
+  public String toString() {
+    StringBuffer buffer = new StringBuffer();
+    buffer.append(parent.toString());
+    buffer.append(" -> [ ");
+    for (AOStarNode child : children) {
+      buffer.append(child.toString());
+      buffer.append(" ");
     }
-    
-    /**
-     * Get the set of child nodes.
-     * 
-     * @return children
-     */
-    public Set<AOStarNode> getChildren() {
-    	return children;
+    buffer.append("] hash " + hashCode());
+    return buffer.toString();
+  }
+
+  public void dump() {
+    System.out.println("Dumping Connector {");
+    parent.dump();
+    System.out.println(" ->  ");
+    for (AOStarNode child : children) {
+      child.dump();
     }
-    
-    public void setChildren(Set<AOStarNode> children) {
-    	this.children = children;
+    System.out.println("}");
+  }
+
+  public void setBaseCost(double baseCost) {
+    this.baseCost = baseCost;
+  }
+
+  public double getBaseCost() {
+    return baseCost;
+  }
+
+  /**
+   * Get the set of child nodes.
+   *
+   * @return children
+   */
+  public Set<AOStarNode> getChildren() {
+    return children;
+  }
+
+  public void setChildren(Set<AOStarNode> children) {
+    this.children = children;
+  }
+
+  /**
+   * Get parent node.
+   *
+   * @return parent
+   */
+  public AOStarNode getParent() {
+    return parent;
+  }
+
+  /**
+   * Get this connector's proven status.
+   *
+   * @return true iff. all children are proven.
+   */
+  public boolean isProven() {
+    checkProvenAndDisprovenStatus();
+    return isProven;
+  }
+
+  /**
+   * Get this connector's disproven status.
+   *
+   * @return true iff. at least one child is disproven.
+   */
+  public boolean isDisproven() {
+    checkProvenAndDisprovenStatus();
+    return isDisproven;
+  }
+
+  /**
+   * Check this connector's proven status.
+   */
+  private void checkProvenAndDisprovenStatus() {
+    if (isProven || isDisproven) {
+      return;
     }
-    
-    /**
-     * Get parent node.
-     * 
-     * @return parent 
-     */
-    public AOStarNode getParent() {
-    	return parent;
+    isProven = true;
+    isDisproven = false;
+    for (AOStarNode child : children) {
+      isProven &= child.isProven();
+      isDisproven |= child.isDisproven();
     }
-    
-    /**
-     * Get this connector's proven status.
-     * 
-     * @return true iff. all children are proven.
-     */
-    public boolean isProven() {
-        checkProvenAndDisprovenStatus();
-        return isProven;
+  }
+
+  /**
+   * Get the maximum cost estimate of this connector's children.
+   *
+   * @return maximum child cost estimate
+   */
+  public double getMaxChildEstimate() {
+    double max = -1;
+    for (AOStarNode child : children) {
+      if (child.costEstimate > max) {
+        max = child.costEstimate;
+      }
     }
-    
-    /**
-     * Get this connector's disproven status.
-     * 
-     * @return true iff. at least one child is disproven.
-     */
-    public boolean isDisproven() {
-        checkProvenAndDisprovenStatus();
-        return isDisproven;
+    assert max >= 0;
+    return max;
+  }
+
+  /**
+   * Get the average cost estimate of this connector's children.
+   *
+   * @return average child cost estimate
+   */
+  public double getAverageChildEstimate() {
+    double average = 0;
+    int num = 0;
+    for (AOStarNode child : children) {
+      average += child.costEstimate;
+      num++;
     }
-    
-    /**
-     * Check this connector's proven status.
-     */
-    private void checkProvenAndDisprovenStatus() {
-        if (isProven || isDisproven) {
-            return;
-        }
-        isProven = true;
-        isDisproven = false;
-        for (AOStarNode child : children) {
-            isProven &= child.isProven();
-            isDisproven |= child.isDisproven();
-        }
+    if (num > 0) {
+      average = average / num;
+    } else {
+      assert average == 0;
     }
-    
-    /**
-     * Get the maximum cost estimate of this connector's children.
-     * 
-     * @return maximum child cost estimate
-     */
-    public double getMaxChildEstimate() {
-        double max = -1;
-        for (AOStarNode child : children) {
-            if (child.costEstimate > max) {
-                max = child.costEstimate;
-            }
-        }
-        assert max >= 0;
-        return max;
-    }
+    return average;
+  }
 }

@@ -20,147 +20,155 @@ import net.sf.javabdd.BDD;
 
 
 /**
- * 
+ *
  * @author Manuela Ortlieb
  *
  */
 public class Abstraction {
 
-    /**
-     * Pattern which induced this abstraction.
-     */
-    public final Set<Integer> pattern; // TODO should not be public
+  /**
+   * Pattern which induced this abstraction.
+   */
+  public final Set<Integer> pattern;
 
-    /**
-     * Abstracted explicit state(s).
-     */
-    private final List<State> initialState;
+  /**
+   * Abstracted explicit state(s).
+   */
+  private final List<State> initialState;
 
-    /**
-     * Abstracted goal.
-     */
-    public final Condition goal;
+  /**
+   * Abstracted goal.
+   */
+  public final Condition goal;
 
-    /**
-     * Abstracted operators.
-     */
-    public final Set<Operator> operators;
+  /**
+   * Abstracted operators.
+   */
+  public final Set<Operator> operators;
 
-    /**
-     * Symbolic pattern complement.
-     */
-    public final BDD symbolicPatternComplement;
+  /**
+   * Symbolic pattern complement.
+   */
+  public final BDD symbolicPatternComplement;
 
-    /**
-     * Explicit axiom evaluator.
-     */
-    private ExplicitAxiomEvaluator explicitAxiomEvaluator;
+  /**
+   * Explicit axiom evaluator.
+   */
+  private ExplicitAxiomEvaluator explicitAxiomEvaluator;
 
-    /**
-     * Symbolic axiom evaluator.
-     */
-    private SymbolicAxiomEvaluator symbolicAxiomEvaluator;
+  /**
+   * Symbolic axiom evaluator.
+   */
+  private SymbolicAxiomEvaluator symbolicAxiomEvaluator;
 
-    /**
-     * Abstracted axioms.
-     */
-    public final Set<OperatorRule> axioms;
+  /**
+   * Abstracted axioms.
+   */
+  public final Set<OperatorRule> axioms;
 
-    public Abstraction(SortedSet<Integer> pattern, Condition goal, Set<Operator> operators, Set<OperatorRule> axioms) {
-        this(pattern, goal, operators, axioms, null);
+  public Abstraction(SortedSet<Integer> pattern, Condition goal, Set<Operator> operators,
+      Set<OperatorRule> axioms) {
+    this(pattern, goal, operators, axioms, null);
+  }
+
+  public Abstraction(SortedSet<Integer> pattern, Condition goal, Set<Operator> operators,
+      Set<OperatorRule> axioms, BDD symbolicPatternComplement) {
+    this.pattern = pattern;
+    initialState = new ArrayList<State>();
+    this.goal = goal;
+    this.operators = Collections.unmodifiableSet(operators);
+    this.axioms = Collections.unmodifiableSet(axioms);
+    this.symbolicPatternComplement = symbolicPatternComplement;
+  }
+
+  private void initializeExplicitAxiomEvaluator() {
+    assert explicitAxiomEvaluator == null;
+    explicitAxiomEvaluator = new ExplicitAxiomEvaluator(axioms);
+    // return explicitAxiomEvaluator;
+  }
+
+  private void initializeSymbolicAxiomEvaluator() {
+    assert symbolicAxiomEvaluator == null;
+    symbolicAxiomEvaluator = new SymbolicAxiomEvaluator(axioms);
+  }
+
+  public void setInitialState(List<State> initialState) {
+    assert this.initialState.isEmpty();
+    for (State state : initialState) {
+      this.initialState.add(state);
     }
+  }
 
-    public Abstraction(SortedSet<Integer> pattern, Condition goal, Set<Operator> operators, Set<OperatorRule> axioms, BDD symbolicPatternComplement) {
-        this.pattern = pattern;
-        this.initialState = new ArrayList<State>();
-        this.goal = goal;
-        this.operators = Collections.unmodifiableSet(operators);
-        this.axioms = Collections.unmodifiableSet(axioms);
-        this.symbolicPatternComplement = symbolicPatternComplement;
+  public List<State> getInitialState() {
+    assert initialState != null;
+    return Collections.unmodifiableList(initialState);
+  }
+
+  /**
+   * Abstract a given mapping to a given pattern.
+   *
+   * @param variableValueMap mapping from variables to values
+   * @param pattern set of variables
+   * @return abstracted mapping
+   */
+  public static Map<Integer, Integer> abstractVariableValueMap(
+      Map<Integer, Integer> variableValueMap, Set<Integer> pattern) {
+    Map<Integer, Integer> abstractedVariableValueMap =
+        new LinkedHashMap<Integer, Integer>(variableValueMap.size());
+    for (int var : variableValueMap.keySet()) {
+      if (pattern.contains(var)) {
+        abstractedVariableValueMap.put(var, variableValueMap.get(var));
+      }
     }
+    return abstractedVariableValueMap;
+  }
 
-    private void initializeExplicitAxiomEvaluator() {
-        assert explicitAxiomEvaluator == null;
-        explicitAxiomEvaluator = new ExplicitAxiomEvaluator(axioms);
-        //return explicitAxiomEvaluator;
+  /**
+   * Get complement of given pattern.
+   *
+   * @param pattern set of state variables
+   * @return complement set of state variables
+   */
+  public static Set<Integer> getPatternComplement(Set<Integer> pattern) {
+    Set<Integer> patternComplement =
+        new HashSet<Integer>((int) (Global.problem.numStateVars / 0.75));
+    for (int var = 0; var < Global.problem.numStateVars; var++) {
+      if (!pattern.contains(var)) {
+        patternComplement.add(var);
+      }
     }
+    return patternComplement;
+  }
 
-    private void initializeSymbolicAxiomEvaluator() {
-        assert symbolicAxiomEvaluator == null;
-        symbolicAxiomEvaluator = new SymbolicAxiomEvaluator(axioms);
+  public SymbolicAxiomEvaluator getSymbolicAxiomEvaluator() {
+    if (symbolicAxiomEvaluator == null) {
+      initializeSymbolicAxiomEvaluator();
     }
+    return symbolicAxiomEvaluator;
+  }
 
-    public void setInitialState(List<State> initialState) {
-        assert this.initialState.isEmpty();
-        for (State state : initialState)
-            this.initialState.add(state);
+  public ExplicitAxiomEvaluator getExplicitAxiomEvaluator() {
+    if (explicitAxiomEvaluator == null) {
+      initializeExplicitAxiomEvaluator();
     }
+    return explicitAxiomEvaluator;
+  }
 
-    public List<State> getInitialState() {
-        assert initialState != null;
-        return Collections.unmodifiableList(initialState);
+  /**
+   * Dump this abstraction. Only for debugging.
+   */
+  public void dump() {
+    System.out.println("Dumping abstraction induced by pattern:");
+    System.out.println(pattern);
+    System.out.println("Abstracted initial state:");
+    for (State state : initialState) {
+      state.dump();
     }
-
-    /**
-     * Abstract a given mapping to a given pattern. 
-     * 
-     * @param variableValueMap mapping from variables to values
-     * @param pattern set of variables
-     * @return abstracted mapping 
-     */
-    public static Map<Integer, Integer> abstractVariableValueMap(Map<Integer, Integer> variableValueMap, Set<Integer> pattern) {
-        Map<Integer, Integer> abstractedVariableValueMap = new LinkedHashMap<Integer, Integer>(variableValueMap.size());
-        for (int var : variableValueMap.keySet()) {
-            if (pattern.contains(var))
-                abstractedVariableValueMap.put(var, variableValueMap.get(var));
-        }
-        return abstractedVariableValueMap;
-    }	
-
-    /**
-     * Get complement of given pattern.
-     * 
-     * @param pattern set of state variables
-     * @return complement set of state variables
-     */
-    public static Set<Integer> getPatternComplement(Set<Integer> pattern) {
-        Set<Integer> patternComplement = new HashSet<Integer>((int) (Global.problem.numStateVars / 0.75));
-        for (int var = 0; var < Global.problem.numStateVars; var++) {
-            if (!pattern.contains(var))
-                patternComplement.add(var);
-        }
-        return patternComplement;
+    System.out.println("Abstracted goal: ");
+    goal.dump();
+    System.out.println("Abstracted operators (" + operators.size() + "):");
+    for (Operator op : operators) {
+      op.dump();
     }
-
-    public SymbolicAxiomEvaluator getSymbolicAxiomEvaluator() {
-        if (symbolicAxiomEvaluator == null) {
-            initializeSymbolicAxiomEvaluator();
-        }
-        return symbolicAxiomEvaluator;
-    }
-
-    public ExplicitAxiomEvaluator getExplicitAxiomEvaluator() {
-        if (explicitAxiomEvaluator == null) {
-            initializeExplicitAxiomEvaluator();
-        }
-        return explicitAxiomEvaluator;
-    }
-
-    /**
-     * Dump this abstraction. Only for debugging.
-     */
-    public void dump() {
-        System.out.println("Dumping abstraction induced by pattern:");
-        System.out.println(pattern);
-        System.out.println("Abstracted initial state:");
-        for (State state : initialState) {
-            state.dump();
-        }
-        System.out.println("Abstracted goal: ");
-        goal.dump();
-        System.out.println("Abstracted operators (" + operators.size() + "):");
-        for (Operator op : operators) {
-            op.dump();
-        }
-    }
+  }
 }

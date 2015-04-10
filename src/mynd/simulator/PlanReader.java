@@ -25,187 +25,189 @@ import mynd.util.Pair;
 
 
 /**
- * 
+ *
  * @author Robert Mattmueller
  *
  */
 public class PlanReader {
 
 
-    ExplicitAxiomEvaluator axiomEvaluator = new ExplicitAxiomEvaluator();
+  ExplicitAxiomEvaluator axiomEvaluator = new ExplicitAxiomEvaluator();
 
-    public static void main(String[] args) throws FileNotFoundException, IOException {
-        final PlanReader reader = new PlanReader();
-        String sasFilename = args[0];
-        String planFilename = args[1];
-        new SasParser().parse(new FileInputStream(sasFilename));
-        assert (Global.problem.isFullObservable);
-        reader.axiomEvaluator = new ExplicitAxiomEvaluator();
-        //Global.problem.getSingleInitialState().uniqueID; TODO check this? was uniqueID();
+  public static void main(String[] args) throws FileNotFoundException, IOException {
+    final PlanReader reader = new PlanReader();
+    String sasFilename = args[0];
+    String planFilename = args[1];
+    new SasParser().parse(new FileInputStream(sasFilename));
+    assert (Global.problem.isFullObservable);
+    reader.axiomEvaluator = new ExplicitAxiomEvaluator();
+    // Global.problem.getSingleInitialState().uniqueID; TODO check this? was uniqueID();
 
-        System.out.println("Parsing " + planFilename);
-        Policy plan = reader.readPlan(planFilename);
+    System.out.println("Parsing " + planFilename);
+    Policy plan = reader.readPlan(planFilename);
 
-        //System.out.println(plan);
-        double planCost = PlanSimulator.performValueIteration(plan);
+    // System.out.println(plan);
+    double planCost = PlanSimulator.performValueIteration(plan);
 
-        System.out.println("Plan cost (expected number of steps to goal): " + planCost);
-        System.out.println(plan.toString());
+    System.out.println("Plan cost (expected number of steps to goal): " + planCost);
+    System.out.println(plan.toString());
+  }
+
+  public PlanReader() {}
+
+  private int parseEntry(List<Pair<Integer, Integer>> propositionIndices, List<Operator> operators,
+      String[] policy, Policy plan, int currentIndex) {
+    int numPreconditions = Integer.parseInt(policy[currentIndex]);
+
+    List<Pair<Integer, Integer>> pairs = new ArrayList<Pair<Integer, Integer>>();
+    for (int i = 0; i < numPreconditions; i++) {
+      int precond = Integer.parseInt(policy[currentIndex + i + 1]);
+      Pair<Integer, Integer> pair = propositionIndices.get(precond);
+      if (pair != null) {
+        pairs.add(pair);
+      } else {
+        // System.err.println("WARNING: Variable not found in SAS encoding. Maybe compiled away?");
+      }
     }
 
-    public PlanReader() {}
+    // FIXME: Can we really be sure that, if a proposition is false in the
+    // Boolean encoding, and if there is no proposition in a variable group
+    // that leads to the corresponding variable getting a defined value,
+    // then that variable *must* have a "<none of those>" value, which is
+    // the correct one to chose?
+    int[] values = new int[Global.problem.variableNames.size()];
+    Arrays.fill(values, -1);
+    for (int i = 0; i < pairs.size(); i++) {
+      int var = pairs.get(i).first;
+      int val = pairs.get(i).second;
+      assert var < values.length;
+      assert values[var] == -1;
+      values[var] = val;
+    }
+    for (int var = 0; var < values.length; var++) {
+      if (values[var] == -1) {
+        values[var] = Global.problem.domainSizes.get(var) - 1;
 
-    private int parseEntry(List<Pair<Integer, Integer>> propositionIndices, List<Operator> operators, String[] policy,
-            Policy plan, int currentIndex) {
-        int numPreconditions = Integer.parseInt(policy[currentIndex]);
+        String propositionName = Global.problem.propositionNames.get(var).get(values[var]);
 
-        List<Pair<Integer, Integer>> pairs = new ArrayList<Pair<Integer, Integer>>();
-        for (int i = 0; i < numPreconditions; i++) {
-            int precond = Integer.parseInt(policy[currentIndex + i + 1]);
-            Pair<Integer, Integer> pair = propositionIndices.get(precond);
-            if (pair != null) {
-                pairs.add(pair);
-            } else {
-                // System.err.println("WARNING: Variable not found in SAS encoding. Maybe compiled away?");
-            }
+        if (!propositionName.startsWith("(not ")) {
+          System.err.println("Ooops. Wrong value ...");
+          ExitCode.EXIT_CRITICAL_ERROR.exit();
         }
-
-        // FIXME: Can we really be sure that, if a proposition is false in the
-        // Boolean encoding, and if there is no proposition in a variable group
-        // that leads to the corresponding variable getting a defined value,
-        // then that variable *must* have a "<none of those>" value, which is
-        // the correct one to chose?
-        int[] values = new int[Global.problem.variableNames.size()];
-        Arrays.fill(values, -1);
-        for (int i = 0; i < pairs.size(); i++) {
-            int var = pairs.get(i).first;
-            int val = pairs.get(i).second;
-            assert var < values.length;
-            assert values[var] == -1;
-            values[var] = val;
-        }
-        for (int var = 0; var < values.length; var++) {
-            if (values[var] == -1) {
-                values[var] = Global.problem.domainSizes.get(var) - 1;
-
-                String propositionName = Global.problem.propositionNames.get(var).get(values[var]);
-
-                if (!propositionName.startsWith("(not ")) {
-                    System.err.println("Ooops. Wrong value ...");
-                    ExitCode.EXIT_CRITICAL_ERROR.exit();
-                }
-            }
-        }
-
-        int action = Integer.parseInt(policy[currentIndex + numPreconditions + 1]);
-        Operator operator = operators.get(action);
-
-        if (operator != null) {
-            plan.addEntry(new ExplicitState(values, axiomEvaluator), operator);
-        } else {
-            // System.err.println("WARNING: Operator not found in SAS encoding. Maybe compiled away?");
-        }
-
-        return numPreconditions + 2;
+      }
     }
 
-    private void parsePolicy(List<Pair<Integer, Integer>> propositionIndices, List<Operator> operators,
-            String[] policy, Policy plan) {
-        int numEntries = Integer.parseInt(policy[1]);
-        int currentIndex = 2;
-        for (int i = 0; i < numEntries; i++) {
-            System.out.println("Parsing policy entry " + i + " of " + numEntries);
-            int offset = parseEntry(propositionIndices, operators, policy, plan, currentIndex);
-            currentIndex += offset;
-        }
+    int action = Integer.parseInt(policy[currentIndex + numPreconditions + 1]);
+    Operator operator = operators.get(action);
 
+    if (operator != null) {
+      plan.addEntry(new ExplicitState(values, axiomEvaluator), operator);
+    } else {
+      // System.err.println("WARNING: Operator not found in SAS encoding. Maybe compiled away?");
     }
 
-    private List<String> parsePropositionsOrActions(String propositions) {
-        Pattern p = Pattern.compile("\\(.*?\\)");
-        Matcher m = p.matcher(propositions);
+    return numPreconditions + 2;
+  }
 
-        List<String> result = new ArrayList<String>();
-
-        while (m.find()) {
-            String find = m.group();
-            // System.err.println(find);
-            result.add(find);
-        }
-
-        return result;
+  private void parsePolicy(List<Pair<Integer, Integer>> propositionIndices,
+      List<Operator> operators, String[] policy, Policy plan) {
+    int numEntries = Integer.parseInt(policy[1]);
+    int currentIndex = 2;
+    for (int i = 0; i < numEntries; i++) {
+      System.out.println("Parsing policy entry " + i + " of " + numEntries);
+      int offset = parseEntry(propositionIndices, operators, policy, plan, currentIndex);
+      currentIndex += offset;
     }
 
-    private List<String> readFile(String filename) throws FileNotFoundException, IOException {
-        BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
-        String line;
-        List<String> lines = new ArrayList<String>();
-        while ((line = reader.readLine()) != null) {
-            line = line.trim();
-            if (!line.equals("")) {
-                lines.add(line);
-            }
-        }
-        reader.close();
-        return lines;
+  }
+
+  private List<String> parsePropositionsOrActions(String propositions) {
+    Pattern p = Pattern.compile("\\(.*?\\)");
+    Matcher m = p.matcher(propositions);
+
+    List<String> result = new ArrayList<String>();
+
+    while (m.find()) {
+      String find = m.group();
+      // System.err.println(find);
+      result.add(find);
     }
 
-    public Policy readPlan(String filename) throws FileNotFoundException, IOException {
-        Policy plan = new Policy();
-        List<String> lines = readFile(filename);
-        assert lines.size() == 5;
-        assert lines.get(1).equals("%%");
-        assert lines.get(3).equals("%%");
-        List<String> propositions = parsePropositionsOrActions(lines.get(0));
-        List<String> actions = parsePropositionsOrActions(lines.get(2));
+    return result;
+  }
 
-        List<Pair<Integer, Integer>> propositionIndices = translatePropositionIndices(propositions);
-        List<Operator> operators = translateActionIndices(actions);
-
-        String[] policy = lines.get(4).split(" ");
-
-        parsePolicy(propositionIndices, operators, policy, plan);
-
-        return plan;
+  private List<String> readFile(String filename) throws FileNotFoundException, IOException {
+    BufferedReader reader =
+        new BufferedReader(new InputStreamReader(new FileInputStream(filename)));
+    String line;
+    List<String> lines = new ArrayList<String>();
+    while ((line = reader.readLine()) != null) {
+      line = line.trim();
+      if (!line.equals("")) {
+        lines.add(line);
+      }
     }
+    reader.close();
+    return lines;
+  }
 
-    private List<Operator> translateActionIndices(List<String> actions) {
-        List<Operator> result = new ArrayList<Operator>();
-        Set<Operator> ops = Global.problem.getOperators();
-        Map<String, Operator> inverseOperatorNames = new HashMap<String, Operator>();
-        for (Operator op : ops) {
-            String name = op.getName();
-            name = "(" + name + ")";
-            inverseOperatorNames.put(name, op);
-        }
-        for (String action : actions) {
-            Operator op = inverseOperatorNames.get(action);
+  public Policy readPlan(String filename) throws FileNotFoundException, IOException {
+    Policy plan = new Policy();
+    List<String> lines = readFile(filename);
+    assert lines.size() == 5;
+    assert lines.get(1).equals("%%");
+    assert lines.get(3).equals("%%");
+    List<String> propositions = parsePropositionsOrActions(lines.get(0));
+    List<String> actions = parsePropositionsOrActions(lines.get(2));
 
-            if (op == null) {
-                System.err.println("WARNING: Removed unnecessary action " + action);
-            }
+    List<Pair<Integer, Integer>> propositionIndices = translatePropositionIndices(propositions);
+    List<Operator> operators = translateActionIndices(actions);
 
-            result.add(op);
-        }
-        return result;
+    String[] policy = lines.get(4).split(" ");
+
+    parsePolicy(propositionIndices, operators, policy, plan);
+
+    return plan;
+  }
+
+  private List<Operator> translateActionIndices(List<String> actions) {
+    List<Operator> result = new ArrayList<Operator>();
+    Set<Operator> ops = Global.problem.getOperators();
+    Map<String, Operator> inverseOperatorNames = new HashMap<String, Operator>();
+    for (Operator op : ops) {
+      String name = op.getName();
+      name = "(" + name + ")";
+      inverseOperatorNames.put(name, op);
     }
+    for (String action : actions) {
+      Operator op = inverseOperatorNames.get(action);
 
-    private List<Pair<Integer, Integer>> translatePropositionIndices(List<String> propositions) {
-        List<Pair<Integer, Integer>> result = new ArrayList<Pair<Integer, Integer>>();
-        List<List<String>> propositionNamesInProblem = Global.problem.propositionNames;
-        Map<String, Pair<Integer, Integer>> inversePropositionNames = new HashMap<String, Pair<Integer, Integer>>();
-        for (int var = 0; var < propositionNamesInProblem.size(); var++) {
-            for (int val = 0; val < propositionNamesInProblem.get(var).size(); val++) {
-                String propName = propositionNamesInProblem.get(var).get(val);
-                inversePropositionNames.put(propName, new Pair<Integer, Integer>(var, val));
-            }
-        }
-        for (String prop : propositions) {
-            Pair<Integer, Integer> pair = inversePropositionNames.get(prop);
-            result.add(pair);
-        }
-        return result;
+      if (op == null) {
+        System.err.println("WARNING: Removed unnecessary action " + action);
+      }
+
+      result.add(op);
     }
+    return result;
+  }
+
+  private List<Pair<Integer, Integer>> translatePropositionIndices(List<String> propositions) {
+    List<Pair<Integer, Integer>> result = new ArrayList<Pair<Integer, Integer>>();
+    List<List<String>> propositionNamesInProblem = Global.problem.propositionNames;
+    Map<String, Pair<Integer, Integer>> inversePropositionNames =
+        new HashMap<String, Pair<Integer, Integer>>();
+    for (int var = 0; var < propositionNamesInProblem.size(); var++) {
+      for (int val = 0; val < propositionNamesInProblem.get(var).size(); val++) {
+        String propName = propositionNamesInProblem.get(var).get(val);
+        inversePropositionNames.put(propName, new Pair<Integer, Integer>(var, val));
+      }
+    }
+    for (String prop : propositions) {
+      Pair<Integer, Integer> pair = inversePropositionNames.get(prop);
+      result.add(pair);
+    }
+    return result;
+  }
 
 
 }

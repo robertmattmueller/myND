@@ -5,128 +5,145 @@ import mynd.simulator.PlanSimulator;
 
 /**
  * An abstract search engine.
- * 
+ *
  * @author Robert Mattmueller
  */
 public abstract class AbstractSearch {
 
-    public enum Result {
-        // existence of a winning strategy for the protagonist
-        PROVEN,
+  public enum Result {
+    // problem has been neither solved nor proven unsolvable yet
+    UNDECIDED,
 
-        //non-existence of a winning strategy for the protagonist
-        DISPROVEN,
+    // existence of a winning strategy for the protagonist
+    PROVEN,
 
-        // indicating time-out
-        TIMEOUT
-    };
+    // non-existence of a winning strategy for the protagonist
+    DISPROVEN,
 
-    /**
-     * Indicates that no time-out is used.
-     */
-    public static final long NO_TIMEOUT = Long.MAX_VALUE;
+    // indicating time-out
+    TIMEOUT
+  };
 
-    /**
-     * System time when search started.
-     */
-    protected long starttime;
+  /**
+   * Indicates that no time-out is used.
+   */
+  public static final long NO_TIMEOUT = Long.MAX_VALUE;
 
-    /**
-     * System time when search ended.
-     */
-    public long endtime;
+  /**
+   * System time when search started.
+   */
+  protected long starttime;
 
-    /**
-     * Search time-out.
-     */
-    long timeout = AbstractSearch.NO_TIMEOUT;
+  /**
+   * System time when search ended.
+   */
+  public long endtime;
 
-    /**
-     * Counter for node expansions.
-     */
-    public static int NODE_EXPANSIONS = 0;
+  /**
+   * Search time-out.
+   */
+  long timeout = AbstractSearch.NO_TIMEOUT;
 
-    /**
-     * Start node of the search.
-     */
-    protected AbstractNode initialNode;
+  /**
+   * Counter for node expansions.
+   */
+  public static int NODE_EXPANSIONS = 0;
 
-    /**
-     * Dump the plan in an arbitrary format.
-     */
-    public void dumpPlan() {
-        System.out.println(getPolicy());
+  /**
+   * Start node of the search.
+   */
+  protected AbstractNode initialNode;
+
+  /**
+   * Expected costs of the resulting plan;
+   */
+  protected Double planCost = null;
+
+  /**
+   * Dump the plan in an arbitrary format.
+   */
+  public void dumpPlan() {
+    System.out.println(getPolicy());
+  }
+
+  public void printPlan(String filename) {
+    getPolicy().printToFile(filename);
+  }
+
+  /**
+   * Return a plan in the form of an explicit state-action table.
+   *
+   * @return Explicit state action table representing the plan that was found or null if no plan was
+   *         found (so far).
+   */
+  public abstract Policy getPolicy();
+
+  /**
+   * Perform a complete run of the search algorithm.
+   *
+   * @return Indicator of result. <tt>AbstractSearch.PROTAGONIST_WINS</tt> if the protagonist
+   *         provably wins, <tt>AbstractSearch.ANTAGONIST_WINS</tt> if the antagonist provably wins,
+   *         and <tt>AbstractSearch.TIMEOUT</tt> if time-out occurred before proof.
+   */
+  public abstract Result run();
+
+  /**
+   * Set the time-out for the search.
+   *
+   * @param timeout Time-out in milliseconds
+   */
+  public void setTimeout(long timeout) {
+    assert timeout > 0 : "A timeout of 0 or less seconds does not make sense.";
+    this.timeout = timeout;
+  }
+
+  /**
+   * Check whether a time-out has occurred.
+   *
+   * @return True iff a time-out has been set and has been exceeded.
+   */
+  protected boolean timeout() {
+    if (timeout == AbstractSearch.NO_TIMEOUT) {
+      return false;
     }
+    return System.currentTimeMillis() - starttime > timeout;
+  }
 
-    public void printPlan(String filename) {
-        getPolicy().printToFile(filename);
-    }
+  /**
+   * Print statistics about the search.
+   *
+   * @param simulatePlan Indicates if the plan should be simulated to compute costs.
+   */
+  public abstract void printStats(boolean simulatePlan);
 
+  /**
+   * Simulate the resulting policy and compute expected costs. Simulation time is measured.
+   */
+  protected void simulatePlan() {
+    assert (getPolicy() != null);
+    long simulatorTime = System.currentTimeMillis();
+    planCost = PlanSimulator.performValueIteration(getPolicy());
+    long simulatorEndTime = System.currentTimeMillis();
+    System.out.println("Plan cost (expected number of steps to goal): " + planCost);
+    System.out.println("Plan simulator time: " + (simulatorEndTime - simulatorTime) / 1000
+        + " seconds.");
+  }
 
-    /**
-     * Return a plan in the form of an explicit state-action table.
-     * 
-     * @return Explicit state action table representing the plan that was found
-     * 	       or null if no plan was found (so far).
-     */
-    public abstract Policy getPolicy();
+  /**
+   * Get expected costs of the resulting plan.
+   *
+   * @return plan costs
+   */
+  public Double getPlanCost() {
+    return planCost;
+  }
 
-    /**
-     * Perform a complete run of the search algorithm.
-     * 
-     * @return Indicator of result. <tt>AbstractSearch.PROTAGONIST_WINS</tt> if
-     *         the protagonist provably wins,
-     *         <tt>AbstractSearch.ANTAGONIST_WINS</tt> if the antagonist
-     *         provably wins, and <tt>AbstractSearch.TIMEOUT</tt> if time-out
-     *         occurred before proof.
-     */
-    public abstract Result run();
-
-    /**
-     * Set the time-out for the search.
-     * 
-     * @param timeout
-     *            Time-out in milliseconds
-     * @throws Exception iff timeout is negative
-     */
-    public void setTimeout(long timeout) throws Exception {
-        if (timeout <= 0) {
-            throw new Exception("Negative timeout for planning is not allowed. Maybe preprocessing takes too much time or timeout has to be increased.");
-        }
-        this.timeout = timeout;
-    }
-
-    /**
-     * Check whether a time-out has occurred.
-     * 
-     * @return True iff a time-out has been set and has been exceeded.
-     */
-    protected boolean timeout() {
-        if (timeout == AbstractSearch.NO_TIMEOUT) {
-            return false;
-        }
-        return System.currentTimeMillis() - starttime > timeout;
-    }
-
-    /**
-     * Print statistics about the search.
-     *
-     * @param simulatePlan Indicates if the plan should be simulated to compute costs.
-     */
-    public abstract void printStats(boolean simulatePlan);
-
-    /**
-     * Simulate the resulting policy and compute expected costs. Simulation time is 
-     * measured.
-     */
-    protected void simulatePlan() {
-        if (getPolicy() != null) {
-            long simulatorTime = System.currentTimeMillis();
-            double planCost = PlanSimulator.performValueIteration(getPolicy());
-            long simulatorEndTime = System.currentTimeMillis();
-            System.out.println("Expected Plan Cost: " + planCost);
-            System.out.println("Plan simulator time: " + (simulatorEndTime - simulatorTime)/ 1000 + " seconds.");
-        }
-    }
-
+  /**
+   * Get root node of this search.
+   *
+   * @return initial node
+   */
+  public AbstractNode getInitialNode() {
+    return initialNode;
+  }
 }
