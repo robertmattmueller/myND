@@ -96,7 +96,7 @@ public class AOStarSearch extends HeuristicSearch {
   /**
    * Only apply one sensing op, which causes a splitting.
    */
-  protected boolean restrictSensingOps = true;
+  protected boolean restrictSensingOps = false;
 
   /**
    * Mapping from unique hash value of world states to nodes in AND/OR graph representing them.
@@ -196,6 +196,7 @@ public class AOStarSearch extends HeuristicSearch {
       unexpandedNodes.add(new PriorityQueue<AOStarNode>(10000, new AOStarNodeComparator(i)));
     }
     if (!Global.problem.isFullObservable) {
+      restrictSensingOps = true;
       // Collect all operators which are sensing but not causative.
       for (Operator op : Global.problem.getOperators()) {
         if (op.isSensing && !op.isCausative) {
