@@ -41,6 +41,14 @@ Useful Java Options are:
 
 A detailed description of the [planner options](https://bitbucket.org/robertmattmueller/mynd/src/default/wiki/Planner_Options.md) can be found on a separate Wiki page.
 
+You can also use the help in myND.
+
+```
+#!bash
+
+java mynd.MyNDPlanner -help
+```
+
 You can find some planning tasks in SAS+ format in the directories *data/benchmarks-fond* and *data/benchmarks-pond*.
 
 ## Example

@@ -95,6 +95,7 @@ MAX_TIME = 300
 
 def find_invariants(task, reachable_action_params):
     candidates = deque(get_initial_invariants(task))
+
     print(len(candidates), "initial candidates")
     seen_candidates = set(candidates)
 
@@ -138,8 +139,10 @@ def useful_groups(invariants, initial_facts):
 def get_groups(task, reachable_action_params=None):
     with timers.timing("Finding invariants", block=True):
         invariants = sorted(find_invariants(task, reachable_action_params))
+
     with timers.timing("Checking invariant weight"):
         result = list(useful_groups(invariants, task.init))
+
     return result
 
 if __name__ == "__main__":

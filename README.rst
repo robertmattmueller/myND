@@ -34,6 +34,10 @@ Check out available planner options from our Wiki page
 
     https://bitbucket.org/robertmattmueller/mynd/src/default/wiki/Planner_Options.md
 
+You can also use the help in myND.
+
+$ java mynd.MyNDPlanner -help
+
 You can find some planning tasks in SAS+ format in the folders data/benchmarks-fond
 and data/benchmarks-pond.
 

@@ -471,7 +471,6 @@ def translate_task(strips_to_sas, ranges, translation_key,
         pairs = strips_to_sas.get(fact, [])
         for pair in pairs:
             false_facts.remove(pair[0])
-
     facts = []
     for fact in init:
         assert fact not in init_unknown
@@ -481,7 +480,8 @@ def translate_task(strips_to_sas, ranges, translation_key,
         if pairs:
             facts = facts + pairs
     for var in false_facts:
-        assert fact not in init_unknown
+        for fact in init_unknown:
+            assert not var == strips_to_sas.get(fact, [])[0][0]
         facts.append((var, ranges[var] - 1))
     facts_oneof = []   
     for oneof in init_oneof:

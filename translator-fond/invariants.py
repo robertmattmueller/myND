@@ -255,23 +255,20 @@ class Invariant:
             add_effects = [eff for eff in nondet_choice
                            if not eff.literal.negated and
                               self.predicate_to_part.get(eff.literal.predicate)]
-        inv_vars = find_unique_variables(h_action, self)
+            inv_vars = find_unique_variables(h_action, self)
 
-        if len(add_effects) <= 1:
-            return False
-
-        for eff1, eff2 in itertools.combinations(add_effects, 2):
-            system = constraints.ConstraintSystem()
-            ensure_inequality(system, eff1.literal, eff2.literal)
-            ensure_cover(system, eff1.literal, self, inv_vars)
-            ensure_cover(system, eff2.literal, self, inv_vars)
-            ensure_conjunction_sat(system, get_literals(h_action.precondition),
-                                   get_literals(eff1.condition),
-                                   get_literals(eff2.condition),
-                                   [eff1.literal.negate()],
-                                   [eff2.literal.negate()])
-            if system.is_solvable():
-                return True
+            for eff1, eff2 in itertools.combinations(add_effects, 2):
+                system = constraints.ConstraintSystem()
+                ensure_inequality(system, eff1.literal, eff2.literal)
+                ensure_cover(system, eff1.literal, self, inv_vars)
+                ensure_cover(system, eff2.literal, self, inv_vars)
+                ensure_conjunction_sat(system, get_literals(h_action.precondition),
+                                       get_literals(eff1.condition),
+                                       get_literals(eff2.condition),
+                                       [eff1.literal.negate()],
+                                       [eff2.literal.negate()])
+                if system.is_solvable():
+                    return True
         return False
 
     def operator_unbalanced(self, action, enqueue_func):
@@ -280,13 +277,14 @@ class Invariant:
         for nondet_choice in action.effects:
             relevant_effs = [eff for eff in nondet_choice
                              if self.predicate_to_part.get(eff.literal.predicate)]
+
             add_effects = [eff for eff in relevant_effs
                            if not eff.literal.negated]
             del_effects = [eff for eff in relevant_effs
                            if eff.literal.negated]
             for eff in add_effects:
                 if self.add_effect_unbalanced(action, eff, del_effects, inv_vars,
-                                              enqueue_func):
+                                                  enqueue_func):
                     return True
         return False
 
@@ -318,13 +316,11 @@ class Invariant:
 
         minimal_renamings = self.minimal_covering_renamings(action, add_effect,
                                                             inv_vars)
-
         lhs_by_pred = defaultdict(list)
         for lit in itertools.chain(get_literals(action.precondition),
                                    get_literals(add_effect.condition),
                                    get_literals(add_effect.literal.negate())):
             lhs_by_pred[lit.predicate].append(lit)
-
         for del_effect in del_effects:
             minimal_renamings = self.unbalanced_renamings(del_effect, add_effect,
                 inv_vars, lhs_by_pred, minimal_renamings)
@@ -347,16 +343,46 @@ class Invariant:
                                                        del_eff.literal):
                         enqueue_func(Invariant(self.parts.union((match,))))
 
+    '''
+    Benedict Wright, Merged changes from FD in to this method!!!
+    '''
     def unbalanced_renamings(self, del_effect, add_effect,
         inv_vars, lhs_by_pred, unbalanced_renamings):
         """returns the renamings from unbalanced renamings for which
            the del_effect does not balance the add_effect."""
         system = constraints.ConstraintSystem()
-        ensure_inequality(system, add_effect.literal, del_effect.literal)
+        #ensure_inequality(system, add_effect.literal, del_effect.literal)
         ensure_cover(system, del_effect.literal, self, inv_vars)
+
+        # Since we may only rename the quantified variables of the delete effect
+        # we need to check that "renamings" of constants are already implied by
+        # the unbalanced_renaming (of the of the operator parameters). The
+        # following system is used as a helper for this. It builds a conjunction
+        # that formulates that the constants are NOT renamed accordingly. We
+        # below check that this is impossible with each unbalanced renaming.
+        check_constants = False
+        constant_test_system = constraints.ConstraintSystem()
+        for a,b in system.combinatorial_assignments[0][0].equalities:
+            # first 0 because the system was empty before we called ensure_cover
+            # second 0 because ensure_cover only adds assignments with one entry
+            if b[0] != "?":
+                check_constants = True
+                neg_clause = constraints.NegativeClause([(a,b)])
+                constant_test_system.add_negative_clause(neg_clause)
+
+        ensure_inequality(system, add_effect.literal, del_effect.literal)
 
         still_unbalanced = []
         for renaming in unbalanced_renamings:
+            if check_constants:
+                new_sys = constant_test_system.combine(renaming)
+                if new_sys.is_solvable():
+                    # it is possible that the operator arguments are not
+                    # mapped to constants as required for covering the delete
+                    # effect
+                    still_unbalanced.append(renaming)
+                    continue
+
             new_sys = system.combine(renaming)
             if self.lhs_satisfiable(renaming, lhs_by_pred):
                 implies_system = self.imply_del_effect(del_effect, lhs_by_pred)

@@ -255,23 +255,23 @@ class Invariant:
             add_effects = [eff for eff in nondet_choice
                            if not eff.literal.negated and
                               self.predicate_to_part.get(eff.literal.predicate)]
-        inv_vars = find_unique_variables(h_action, self)
+            inv_vars = find_unique_variables(h_action, self)
 
-        if len(add_effects) <= 1:
-            return False
+            #if len(add_effects) <= 1:
+            #    return False
 
-        for eff1, eff2 in itertools.combinations(add_effects, 2):
-            system = constraints.ConstraintSystem()
-            ensure_inequality(system, eff1.literal, eff2.literal)
-            ensure_cover(system, eff1.literal, self, inv_vars)
-            ensure_cover(system, eff2.literal, self, inv_vars)
-            ensure_conjunction_sat(system, get_literals(h_action.precondition),
-                                   get_literals(eff1.condition),
-                                   get_literals(eff2.condition),
-                                   [eff1.literal.negate()],
-                                   [eff2.literal.negate()])
-            if system.is_solvable():
-                return True
+            for eff1, eff2 in itertools.combinations(add_effects, 2):
+                system = constraints.ConstraintSystem()
+                ensure_inequality(system, eff1.literal, eff2.literal)
+                ensure_cover(system, eff1.literal, self, inv_vars)
+                ensure_cover(system, eff2.literal, self, inv_vars)
+                ensure_conjunction_sat(system, get_literals(h_action.precondition),
+                                       get_literals(eff1.condition),
+                                       get_literals(eff2.condition),
+                                       [eff1.literal.negate()],
+                                       [eff2.literal.negate()])
+                if system.is_solvable():
+                    return True
         return False
 
     def operator_unbalanced(self, action, enqueue_func):

@@ -30,17 +30,43 @@ Use LAO* search to find strong cyclic plans.
 
 ## Node expansions during (L)AO*-search 
 
-The following option can be used to determine how many nodes are expanded at most in one iteration.
+The following options can be used to control the expansion strategy of the AO* and LAO* search. 
 
 ```
 #!bash
 
-[-maxNumberOfNodesToExpand INTEGER]
+[-maxNumberOfNodesToExpand INTEGER] [-rateOfNodesToExpand DOUBLE] [-linear LIST] [-alternate INTEGER LIST_1 ... LIST_n]
 ```
 
 * `-maxNumberOfNodesToExpand INTEGER` Maximal number of nodes of the AND/OR-graph which are expanded in *one iteration*. ***Default:*** 1.
 
+* `-rateOfNodesToExpand DOUBLE[0.0,1.0]` If no node to expand is found in current best partial solution graph, then expand rateOfNodesToExpand of the unexpanded nodes (but not more than *maxNumberOfNodesToExpand*). ***Default:*** 1.0.
 
+To make the next two options clear, it is important to know, that the set of unexpanded nodes is organized in a priority queue. With options `-linear` and `-alternate` you are able to specify the sorting of this queue. Experimental results show that it is crucial for efficiency to set these options reasonably. Our default option, namely alternating between expanding the nodes with minimal heuristic (plus oldest nodes as tie-breaker) and the oldest nodes, seems to have a good overall performance on our benchmarks. If you want to use the default configuration, do not use `-linear` or `-alternate`. Nodes with highest priority in this set of unexpanded nodes are expanded in situations where no unexpanded child node is found while tracing the current best partial solution graph.
+
+* `-linear LIST{minHeuristic,maxHeuristic,minDepth,maxDepth,oldest,newest,random}` Specify which unexpanded nodes should be expanded. The first keyword in the list is the main criterion. The others are used for tie-breaking. See the example below.
+
+* `-alternate INTEGER LIST_1 ... LIST_n` Give the number of lists n, followed by lists LIST{minHeuristic,maxHeuristic,minDepth,maxDepth,oldest,newest,random} which specify which unexpanded nodes should be expanded. Each list defines an expansion strategy and in each iteration these strategies are considered in a round-robin fashion. See the example below.
+
+*Note*: The option `-linear` is a special case of `-alternate 1 LIST`.
+
+### Examples
+
+Example of using the *-linear* option. Expand nodes with minimal heuristic and use the creation date as tie-breaker (older nodes preferred).
+
+```
+#!bash
+
+-linear "(minHeuristic,oldest)"
+```
+
+Example of using the *-alternate* option. This is the ***default*** configuration which is used, when `-linear` and `-alternate` is not specified. Alternate between expanding the nodes with minimal heuristic (and oldest nodes as tie-breaker) and the oldest nodes.
+
+```
+#!bash
+
+-alternate 2 "(minHeuristic,oldest)" "(oldest)"
+```
 
 # Heuristics 
 ----
