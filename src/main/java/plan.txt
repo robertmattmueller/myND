@@ -1,0 +1,22 @@
+Heuristic: FF-heuristic.
+Algorithm: LAO*-search
+INITIAL IS PROVEN!
+
+Result: Strong cyclic plan found.
+
+Time needed for preprocess (Parsing, PDBs, ...):    0.046 seconds.
+Time needed for search:                             0.045 seconds.
+Time needed:                                        0.091 seconds.
+Total Garbage Collections: 2
+Total Garbage Collection Time: 0 seconds.
+
+Out of 52 nodes, 17 are proven
+Number of node expansions: 17
+Policy entries: 10
+Number of sensing applications in policy: 0
+
+36 (clear b1) (clear b2) (clear b3) (clear b4) (clear b5) (emptyhand) (holding b1) (on b1 b2) (on b1 b3) (on b1 b4) (on b1 b5) (on-table b1) (holding b2) (on b2 b1) (on b2 b3) (on b2 b4) (on b2 b5) (on-table b2) (holding b3) (on b3 b1) (on b3 b2) (on b3 b4) (on b3 b5) (on-table b3) (holding b4) (on b4 b1) (on b4 b2) (on b4 b3) (on b4 b5) (on-table b4) (holding b5) (on b5 b1) (on b5 b2) (on b5 b3) (on b5 b4) (on-table b5) 
+%%
+10 (pick-up b2 b1) (put-down b2) (pick-up b5 b4) (put-down b5) (pick-up b1 b3) (put-down b1) (pick-up-from-table b2) (put-on-block b2 b5) (pick-up-from-table b1) (put-on-block b1 b2) 
+%%
+policy 10 8 1 4 5 8 13 23 29 34 0 7 0 4 8 12 23 29 34 1 9 0 1 4 5 8 17 23 29 34 2 8 0 1 3 8 17 23 29 30 3 10 0 1 3 4 5 8 17 23 29 35 4 9 1 2 3 4 6 17 23 29 35 5 11 0 1 2 3 4 5 11 17 23 29 35 6 9 0 2 3 4 11 12 23 29 35 7 10 0 1 2 3 5 11 16 23 29 35 8 8 1 2 3 6 16 23 29 35 9 

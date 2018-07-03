@@ -1,0 +1,6 @@
+(define (problem test-1)
+  (:domain test-axioms)
+  (:objects A B - block)
+  (:init (true A) (true B))
+  (:goal (and (not (allTrue)) (not (allFalse))))
+)

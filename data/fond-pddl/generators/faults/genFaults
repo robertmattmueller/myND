@@ -1,0 +1,96 @@
+#!/bin/bash
+
+genProblem(){
+OPERATIONS=$1
+FAULTS=$2
+
+echo "(define (problem fault_o"$OPERATIONS"_f"$FAULTS")"
+echo " (:domain faults)"
+echo " (:init "
+for((i=1;i<=$OPERATIONS;i++)); do {
+echo "	(not_completed o$i)"
+}; done
+for((i=1;i<=$FAULTS;i++)); do {
+echo "	(not_fault f$i)"
+}; done
+echo " )"
+echo " (:goal (made))"
+echo ")"
+}
+
+genDomain(){
+OPERATIONS=$1
+FAULTS=$2
+
+echo "(define (domain faults)"
+echo " (:types operation fault)"
+for((i=1;i<=$FAULTS;i++)); do {
+ line="$line f$i"
+}; done 
+echo " (:constants $line - fault "
+line=""
+for((i=1;i<=$OPERATIONS;i++)); do {
+ line="$line o$i"
+}; done 
+echo "             $line - operation)"
+echo " (:predicates "
+echo "   (not_completed ?o - operation)"
+echo "   (completed ?o - operation)"
+echo "   (fault ?f - fault)"
+echo "   (not_fault ?f - fault)"
+echo "   (faulted_op ?o - operation ?f - fault)"
+echo "   (last_fault ?f - fault)"
+echo "   (made)"
+echo "  )"
+echo ""
+
+for((i=1;i<=$FAULTS;i++)); do {
+echo " (:action perform_operation_"$i"_fault"
+echo "  :parameters (?o - operation)"
+line=""
+for((j=1;j<=$FAULTS;j++)); do {
+ if [ $j -lt $i ] ; then
+  line="$line (fault f$j)"
+ else
+  line="$line (not_fault f$j)"
+ fi
+} ;done
+echo "  :precondition (and $line (not_completed ?o))"
+echo "  :effect (and (completed ?o) (not (not_completed ?o))"
+echo "               (oneof (and) (and (fault f$i) (not (not_fault f$i))"
+echo "                                 (faulted_op ?o f$i) (last_fault f$i))))"
+echo " )"
+} ; done
+
+
+for((i=1;i<=$FAULTS;i++)); do {
+echo " (:action repair_fault_$i"
+echo "  :parameters (?o - operation)"
+echo "  :precondition (and (faulted_op ?o f$i) (last_fault f$i))"
+echo "  :effect (and (not (faulted_op ?o f$i))"
+echo "               (not_completed ?o) (not (completed ?o))"
+if [ $i -gt 1 ] ; then
+echo "               (last_fault f`expr $i - 1`)"
+fi
+echo "               (not (last_fault f$i)) (not_fault f$i)"
+echo "          )"
+echo "  )"
+} ; done
+
+
+echo " (:action finish "
+line=""
+for((i=1;i<=$OPERATIONS;i++)); do {
+ line="$line (completed o$i)"
+}; done
+echo "  :precondition (and $line (not (last_fault f$FAULTS)))"
+echo "  :effect (made)"
+echo " )"
+echo ")"
+
+
+}
+
+
+genProblem $1 $2 > p_$1_$2.pddl
+genDomain $1 $2 > d_$1_$2.pddl

@@ -1,0 +1,114 @@
+#!/bin/bash
+
+
+
+
+genProblem(){
+echo "(define (problem FR_"$1"_"$2")"
+echo " (:domain first-response)"
+for((i=1; i<=$1;i++)); do {
+line="$line l$i"
+}; done
+echo " (:objects $line  - location"
+
+FIREUNITS=`expr $RANDOM % $1`
+line=""
+for((i=1; i<=$FIREUNITS+1;i++)); do {
+line="$line f$i"
+}; done
+echo "	   $line - fire_unit"
+
+
+line=""
+for((i=1; i<=$2;i++)); do {
+line="$line v$i"
+}; done
+echo "	   $line - victim"
+
+line=""
+MEDUNITS=`expr $RANDOM % $1`
+for((i=1; i<=$MEDUNITS+1;i++)); do {
+line="$line m$i"
+}; done
+echo "	   $line - medical_unit"
+
+
+echo ")"
+echo " (:init "
+echo "	;;strategic locations"
+
+line=""
+HOSPITALS=`expr $RANDOM % $1`
+for((i=1; i<=$HOSPITALS+1;i++)); do {
+LOC=`expr $RANDOM % $1`
+LOC=`expr $LOC + 1`
+echo "     (hospital l$LOC)"
+}; done
+
+line=""
+WATER=`expr $RANDOM % $1`
+for((i=1; i<=$WATER+1;i++)); do {
+LOC=`expr $RANDOM % $1`
+LOC=`expr $LOC + 1`
+echo "     (water-at l$LOC)"
+}; done
+
+
+	
+echo "	;;disaster info"
+
+line=""
+FIRES=$2  
+for((i=1; i<=$FIRES;i++)); do {
+LOC=`expr $RANDOM % $1`
+LOC=`expr $LOC + 1`
+echo "     (fire l$LOC)"
+GOALFIRES="$GOALFIRES (nfire l$LOC)"
+LOC=`expr $RANDOM % $1`
+LOC=`expr $LOC + 1`
+echo "     (victim-at v$i l$LOC)"
+STATUS=`expr $RANDOM % 2`
+if [ $STATUS -eq 0 ]; then
+echo "     (victim-status v$i dying)"
+else
+echo "     (victim-status v$i hurt)"
+fi
+GOALVICTIMS="$GOALVICTIMS (victim-status v$i healthy)"
+}; done
+
+
+
+echo "	;;map info"
+for((i=1;i<=$1;i++)); do {
+echo "	(adjacent l$i l$i)"
+}; done
+
+for((i=1;i<=$1;i++)); do {
+NUMADJ=`expr $RANDOM % $1`
+ for((j=1;j<=$NUMADJ;j++)); do {
+echo "   (adjacent l$i l$j)"
+echo "   (adjacent l$j l$i)"
+ }; done
+}; done
+
+
+
+for((i=1;i<=$FIREUNITS+1;i++)); do {
+LOC=`expr $RANDOM % $1`
+LOC=`expr $LOC + 1`
+echo "	(fire-unit-at f$i l$LOC)"
+}; done
+
+for((i=1;i<=$MEDUNITS+1;i++)); do {
+LOC=`expr $RANDOM % $1`
+LOC=`expr $LOC + 1`
+echo "	(medical-unit-at m$i l$LOC)"
+}; done
+echo "	)"
+ 
+echo " (:goal (and $GOALFIRES $GOALVICTIMS))"
+	
+echo " )"
+}
+
+genProblem $1 $2 > p_$1_$2.pddl
