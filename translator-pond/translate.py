@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
@@ -36,7 +36,7 @@ def partition(seq, key):
     return partition.values()
 
 # TODO: The translator may generate trivial derived variables which are always
-# true, for example if there is a derived predicate in the input that only 
+# true, for example if there is a derived predicate in the input that only
 # depends on (non-derived) variables which are detected as always true.
 # Such a situation was encountered in the PSR-STRIPS-DerivedPredicates domain.
 # Such "always-true" variables should best be compiled away, but it is
@@ -193,7 +193,7 @@ def translate_strips_operator(operator_list, dictionary, ranges, mutex_dict,
             if op is not None:
                 sas_operators.append(op)
         result.extend(sas_operators) # FOND
-    
+
     return result
 
 
@@ -328,7 +328,7 @@ def build_sas_operator(name, condition, effects_by_variable, cost, ranges,
     #if not pre_post:  # operator is noop
         #return None
     prevail = list(condition.items())
-    return sas_tasks.SASOperator(name, prevail, pre_post, cost, observation)   
+    return sas_tasks.SASOperator(name, prevail, pre_post, cost, observation)
 
 def prune_stupid_effect_conditions(var, val, conditions):
     ## (IF <conditions> THEN <var> := <val>) is a conditional effect.
@@ -390,7 +390,7 @@ def translate_strips_operators(actions, strips_to_sas, ranges, mutex_dict,
                                             mutex_dict, mutex_ranges,
                                             implied_facts)
         if len(sas_ops) > 0:
-            # FOND Step 2: Translate groups of actions with the same name 
+            # FOND Step 2: Translate groups of actions with the same name
             # and precondition together.
             operatorname = sas_ops[0].name
             assert all(op.name == operatorname for op in sas_ops)
@@ -407,7 +407,7 @@ def translate_strips_operators(actions, strips_to_sas, ranges, mutex_dict,
                     prevail |= set(op.prevail)
                     pre_post.append(sorted(op.pre_post))
                 result.append(sas_tasks.SASOperator(operatorname, prevail, pre_post, operatorcost, observation))
-        
+
     return result
 
 
@@ -483,7 +483,7 @@ def translate_task(strips_to_sas, ranges, translation_key,
         for fact in init_unknown:
             assert not var == strips_to_sas.get(fact, [])[0][0]
         facts.append((var, ranges[var] - 1))
-    facts_oneof = []   
+    facts_oneof = []
     for oneof in init_oneof:
         assert len(oneof) >= 2
         for fact in oneof:
@@ -541,8 +541,8 @@ def translate_task(strips_to_sas, ranges, translation_key,
     operators = translate_strips_operators(actions, strips_to_sas, ranges,
                                            mutex_dict, mutex_ranges,
                                            implied_facts)
-    observation_operators = translate_strips_operators(observation_actions, 
-                                                       strips_to_sas, ranges, 
+    observation_operators = translate_strips_operators(observation_actions,
+                                                       strips_to_sas, ranges,
                                                        mutex_dict, mutex_ranges,
                                                        implied_facts)
     axioms = translate_strips_axioms(axioms, strips_to_sas, ranges, mutex_dict,
@@ -556,7 +556,7 @@ def translate_task(strips_to_sas, ranges, translation_key,
     variables = sas_tasks.SASVariables(ranges, axiom_layers, translation_key)
     mutexes = [sas_tasks.SASMutexGroup(group) for group in mutex_key]
     return sas_tasks.SASTask(variables, mutexes, init, goal,
-                             operators + observation_operators, 
+                             operators + observation_operators,
                              axioms, metric)
 
 def unsolvable_sas_task(msg):
@@ -582,11 +582,11 @@ def pddl_to_sas(task):
     # are true initially (to use it in the reachability analysis)
     mod_task = deepcopy(task)
     mod_task.init = mod_task.init + mod_task.init_unknown
-    
+
     with timers.timing("Instantiating", block=True):
         (relaxed_reachable, atoms, actions, observation_actions, axioms,
          reachable_action_params) = instantiate.explore(mod_task)
-    
+
     if not relaxed_reachable:
         # POND we return no unsolvable task
         return

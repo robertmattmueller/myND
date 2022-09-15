@@ -1,4 +1,4 @@
-#! /usr/bin/env python
+#! /usr/bin/env python2
 # -*- coding: utf-8 -*-
 
 from __future__ import print_function
@@ -36,7 +36,7 @@ def partition(seq, key):
     return partition.values()
 
 # TODO: The translator may generate trivial derived variables which are always
-# true, for example if there is a derived predicate in the input that only 
+# true, for example if there is a derived predicate in the input that only
 # depends on (non-derived) variables which are detected as always true.
 # Such a situation was encountered in the PSR-STRIPS-DerivedPredicates domain.
 # Such "always-true" variables should best be compiled away, but it is
@@ -193,7 +193,7 @@ def translate_strips_operator(operator_list, dictionary, ranges, mutex_dict,
             if op is not None:
                 sas_operators.append(op)
         result.extend(sas_operators) # FOND
-    
+
     return result
 
 
@@ -384,12 +384,12 @@ def translate_strips_operators(actions, strips_to_sas, ranges, mutex_dict,
     #         same action with equal parameters and conditions.
     actions_by_name = partition(actions, (lambda a: a.name))
     result = []
-    for action_list in actions_by_name: 
+    for action_list in actions_by_name:
         sas_ops = translate_strips_operator(action_list, strips_to_sas, ranges,
                                             mutex_dict, mutex_ranges,
                                             implied_facts)
         if len(sas_ops) > 0:
-            # FOND Step 2: Translate groups of actions with the same name 
+            # FOND Step 2: Translate groups of actions with the same name
             # and precondition together.
             operatorname = sas_ops[0].name
             assert all(op.name == operatorname for op in sas_ops)
@@ -404,7 +404,7 @@ def translate_strips_operators(actions, strips_to_sas, ranges, mutex_dict,
                     prevail |= set(op.prevail)
                     pre_post.append(sorted(op.pre_post))
                 result.append(sas_tasks.SASOperator(operatorname, prevail, pre_post, operatorcost))
-    
+
     return result
 
 
