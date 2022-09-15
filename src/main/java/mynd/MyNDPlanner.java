@@ -153,10 +153,8 @@ public class MyNDPlanner {
 
   private void execute_translator(){
 
-    String domain = new File(getClass().getClassLoader().getResource
-        (Global.options.getDomainFilename()).getFile()).getAbsolutePath();
-    String instance = new File(getClass().getClassLoader().getResource
-        (Global.options.getInstanceFilename()).getFile()).getAbsolutePath();
+    String domain = new File(Global.options.getDomainFilename()).getAbsolutePath();
+    String instance = new File(Global.options.getInstanceFilename()).getAbsolutePath();
     String translator;
 
 
